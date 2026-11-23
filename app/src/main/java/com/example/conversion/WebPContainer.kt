@@ -348,15 +348,23 @@ object WebPContainer {
         shouldAbort: () -> Boolean = { false }
     ): ByteArray {
         val anmfChunks = ArrayList<ByteArray>(frames.size)
+        val cachedByBitmap = java.util.IdentityHashMap<Bitmap, Pair<ByteArray, Boolean>>(frames.size)
         var anyAlpha = false
         for (frame in frames) {
             if (shouldAbort()) throw InterruptedException("Aborted")
-            val staticBytes = encodeStaticWebP(frame.bitmap, quality, lossless)
-            val payloadChunks = extractImageBitstreamChunks(staticBytes)
-            if (payloadChunks.isEmpty()) {
-                throw IllegalStateException("Empty WebP frame bitstream")
+            val cached = cachedByBitmap[frame.bitmap]
+            val (payloadChunks, frameHasAlpha) = if (cached != null) {
+                cached
+            } else {
+                val staticBytes = encodeStaticWebP(frame.bitmap, quality, lossless)
+                val chunks = extractImageBitstreamChunks(staticBytes)
+                if (chunks.isEmpty()) {
+                    throw IllegalStateException("Empty WebP frame bitstream")
+                }
+                val alpha = containsAlphaPayload(chunks)
+                (chunks to alpha).also { cachedByBitmap[frame.bitmap] = it }
             }
-            if (containsAlphaPayload(payloadChunks)) {
+            if (frameHasAlpha) {
                 anyAlpha = true
             }
             val duration = maxOf(8, frame.durationMs)

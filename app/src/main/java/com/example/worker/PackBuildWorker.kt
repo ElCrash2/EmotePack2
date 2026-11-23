@@ -51,9 +51,10 @@ class PackBuildWorker(
         const val KEY_TRIM_ITEM_IDS = "trim_item_ids"
         const val CHANNEL_ID = "emotepack_downloads"
         const val NOTIFICATION_ID = 4102
-        private const val PER_ITEM_TIMEOUT_MS = 45_000L
-        private const val MAX_CONCURRENT_ITEMS = 2
-        private const val MAX_CONCURRENT_ANIMATIONS = 1
+        private const val DOWNLOAD_TIMEOUT_MS = 20_000L
+        private const val CONVERSION_TIMEOUT_MS = 45_000L
+        private const val MAX_CONCURRENT_ITEMS = 3
+        private const val MAX_CONCURRENT_ANIMATIONS = 2
     }
 
     override suspend fun doWork(): Result {
@@ -177,91 +178,94 @@ class PackBuildWorker(
         }
 
         try {
-            withTimeout(PER_ITEM_TIMEOUT_MS) {
-                val effectiveVersionKey = item.versionKey.ifBlank {
-                    "${item.versionUpdatedAt}_${item.highResUrl.hashCode()}"
+            val effectiveVersionKey = item.versionKey.ifBlank {
+                "${item.versionUpdatedAt}_${item.highResUrl.hashCode()}"
+            }
+            val cacheKey = "${item.emoteId}_$effectiveVersionKey"
+            val cacheEntry = repo.getEmoteCache(cacheKey)
+                ?: if (item.versionUpdatedAt == 0L) repo.getLatestEmoteCache(item.emoteId) else null
+
+            // Step A: Reuse validated shared-cache variant for targetMode + CONVERTER_VERSION
+            if (cacheEntry != null && cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION) {
+                val cachedVariantPath = when (targetMode) {
+                    StickerConversionMode.STATIC -> cacheEntry.staticWebpPath
+                    StickerConversionMode.ANIMATED -> cacheEntry.animatedWebpPath
+                    StickerConversionMode.FAKE_VID -> cacheEntry.fakeVidWebpPath
                 }
-                val cacheKey = "${item.emoteId}_$effectiveVersionKey"
-                val cacheEntry = repo.getEmoteCache(cacheKey)
-                    ?: if (item.versionUpdatedAt == 0L) repo.getLatestEmoteCache(item.emoteId) else null
+                val variantFile = cachedVariantPath?.let(::File)
+                val info = if (variantFile != null && variantFile.exists()) {
+                    StickerConverter.validateExistingWebp(variantFile, expectAnimatedOutput)
+                } else null
 
-                // Step A: Reuse validated shared-cache variant for targetMode + CONVERTER_VERSION
-                if (cacheEntry != null && cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION) {
-                    val cachedVariantPath = when (targetMode) {
-                        StickerConversionMode.STATIC -> cacheEntry.staticWebpPath
-                        StickerConversionMode.ANIMATED -> cacheEntry.animatedWebpPath
-                        StickerConversionMode.FAKE_VID -> cacheEntry.fakeVidWebpPath
-                    }
-                    val variantFile = cachedVariantPath?.let(::File)
-                    val info = if (variantFile != null && variantFile.exists()) {
-                        StickerConverter.validateExistingWebp(variantFile, expectAnimatedOutput)
-                    } else null
-
-                    if (info != null && variantFile != null) {
-                        repo.touchEmoteCache(cacheEntry.cacheKey)
-                        repo.updateItem(
-                            item.copy(
-                                finalWebpPath = variantFile.absolutePath,
-                                stickerFileName = sanitizeStickerFileName(item.emoteId),
-                                fileSizeBytes = variantFile.length(),
-                                width = info.width,
-                                height = info.height,
-                                frameCount = info.frameCount,
-                                durationMs = info.totalDurationMs,
-                                hasAlpha = info.hasAlpha,
-                                status = ItemConversionStatus.COMPLETED,
-                                errorMessage = null,
-                                versionKey = effectiveVersionKey,
-                                conversionMode = targetModeStr
-                            )
+                if (info != null && variantFile != null) {
+                    repo.touchEmoteCache(cacheEntry.cacheKey)
+                    repo.updateItem(
+                        item.copy(
+                            finalWebpPath = variantFile.absolutePath,
+                            stickerFileName = sanitizeStickerFileName(item.emoteId),
+                            fileSizeBytes = variantFile.length(),
+                            width = info.width,
+                            height = info.height,
+                            frameCount = info.frameCount,
+                            durationMs = info.totalDurationMs,
+                            hasAlpha = info.hasAlpha,
+                            status = ItemConversionStatus.COMPLETED,
+                            errorMessage = null,
+                            versionKey = effectiveVersionKey,
+                            conversionMode = targetModeStr
                         )
-                        updateNotificationSafe(collectionName, processedCount.incrementAndGet(), total)
-                        return@withTimeout
-                    }
-                }
-
-                // Step B: Obtain source bytes from local original cache (or offline static fallback),
-                // or download from 7TV if not cached locally
-                var sourceBytes: ByteArray? = readLocalOriginalOrFallback(cacheEntry, item)
-                var originalFile: File? = cacheEntry?.originalFilePath?.let(::File)?.takeIf { it.exists() }
-
-                if (sourceBytes == null) {
-                    repo.updateItem(item.copy(status = ItemConversionStatus.DOWNLOADING, errorMessage = null))
-                    val urlsToTry = listOf(item.highResUrl) +
-                        item.fallbackUrlsCsv.split("|").filter { it.isNotBlank() }
-
-                    val downloaded = downloadFirstAvailable(httpClient, urlsToTry)
-                    if (downloaded == null) {
-                        repo.updateItem(
-                            item.copy(
-                                status = ItemConversionStatus.FAILED,
-                                errorMessage = applicationContext.getString(R.string.error_network)
-                            )
-                        )
-                        updateNotificationSafe(collectionName, processedCount.incrementAndGet(), total)
-                        return@withTimeout
-                    }
-                    sourceBytes = downloaded.bytes
-                    val detectedExt = detectExtensionFromMagic(downloaded.bytes, downloaded.extension)
-                    val savedOrig = repo.storage.getSharedOriginalFile(
-                        emoteId = item.emoteId,
-                        versionKey = effectiveVersionKey,
-                        ext = detectedExt
                     )
-                    savedOrig.writeBytes(downloaded.bytes)
-                    originalFile = savedOrig
+                    updateNotificationSafe(collectionName, processedCount.incrementAndGet(), total)
+                    return
                 }
+            }
 
-                if (isStopped) {
-                    throw CancellationException("Worker stopped")
+            // Step B: Obtain source bytes from local original cache (or offline static fallback),
+            // or download from 7TV if not cached locally
+            var sourceBytes: ByteArray? = readLocalOriginalOrFallback(cacheEntry, item)
+            var originalFile: File? = cacheEntry?.originalFilePath?.let(::File)?.takeIf { it.exists() }
+
+            if (sourceBytes == null) {
+                repo.updateItem(item.copy(status = ItemConversionStatus.DOWNLOADING, errorMessage = null))
+                val urlsToTry = listOf(item.highResUrl) +
+                    item.fallbackUrlsCsv.split("|").filter { it.isNotBlank() }
+
+                val downloaded = withTimeout(DOWNLOAD_TIMEOUT_MS) {
+                    downloadFirstAvailable(httpClient, urlsToTry)
                 }
+                if (downloaded == null) {
+                    repo.updateItem(
+                        item.copy(
+                            status = ItemConversionStatus.FAILED,
+                            errorMessage = applicationContext.getString(R.string.error_network)
+                        )
+                    )
+                    updateNotificationSafe(collectionName, processedCount.incrementAndGet(), total)
+                    return
+                }
+                sourceBytes = downloaded.bytes
+                val detectedExt = detectExtensionFromMagic(downloaded.bytes, downloaded.extension)
+                val savedOrig = repo.storage.getSharedOriginalFile(
+                    emoteId = item.emoteId,
+                    versionKey = effectiveVersionKey,
+                    ext = detectedExt
+                )
+                savedOrig.writeBytes(downloaded.bytes)
+                originalFile = savedOrig
+            }
 
-                // Step C: Convert off the main thread on Dispatchers.Default, limiting simultaneous animations
-                repo.updateItem(item.copy(status = ItemConversionStatus.CONVERTING))
-                val allowTrim = trimAll || item.id in trimItemIds
+            if (isStopped) {
+                throw CancellationException("Worker stopped")
+            }
 
-                val outcome = if (expectAnimatedOutput) {
-                    animSemaphore.withPermit {
+            // Step C: Convert off the main thread on Dispatchers.Default, limiting simultaneous animations
+            // Timeout starts AFTER acquiring animSemaphore so queued animations never starve each other.
+            val allowTrim = trimAll || item.id in trimItemIds
+
+            val outcome = if (expectAnimatedOutput) {
+                animSemaphore.withPermit {
+                    repo.updateItem(item.copy(status = ItemConversionStatus.CONVERTING))
+                    withTimeout(CONVERSION_TIMEOUT_MS) {
                         withContext(Dispatchers.Default) {
                             StickerConverter.convert(
                                 inputBytes = sourceBytes,
@@ -271,7 +275,10 @@ class PackBuildWorker(
                             )
                         }
                     }
-                } else {
+                }
+            } else {
+                repo.updateItem(item.copy(status = ItemConversionStatus.CONVERTING))
+                withTimeout(CONVERSION_TIMEOUT_MS) {
                     withContext(Dispatchers.Default) {
                         StickerConverter.convert(
                             inputBytes = sourceBytes,
@@ -281,6 +288,7 @@ class PackBuildWorker(
                         )
                     }
                 }
+            }
 
                 when (outcome) {
                     is ConversionOutcome.Success -> {
@@ -342,7 +350,6 @@ class PackBuildWorker(
                 }
 
                 updateNotificationSafe(collectionName, processedCount.incrementAndGet(), total)
-            }
         } catch (ce: CancellationException) {
             if (ce is TimeoutCancellationException) {
                 Log.e(TAG, "Conversion timed out for ${item.emoteName} (${item.emoteId})")
