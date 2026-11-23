@@ -1,0 +1,6 @@
+{
+  "name": "EmotePack",
+  "description": "Search 7TV streamers and emotes, convert static and animated emotes into WhatsApp-ready WebP sticker packs, and manage offline collections.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

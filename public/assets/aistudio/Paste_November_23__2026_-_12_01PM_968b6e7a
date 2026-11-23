@@ -1,0 +1,1099 @@
+# PROYECTO COMPLETO: APLICACIÓN ANDROID PARA CREAR COLECCIONES DE STICKERS DE WHATSAPP A PARTIR DE EMOTES DE 7TV
+
+Quiero desarrollar una aplicación Android completa, moderna, funcional y optimizada para crear colecciones de stickers de WhatsApp utilizando los emotes disponibles en 7TV.
+
+Este documento contiene todas las especificaciones del proyecto. Implementa todas las funcionalidades descritas, sin limitarte a crear una interfaz visual o una demostración.
+
+**IMPORTANTE:**
+
+Trabaja directamente sobre el proyecto Android Studio disponible en el entorno.
+
+Si el proyecto contiene código previo, consérvalo cuando sea útil y modifica lo necesario. Si se trata de una primera versión, desarrolla las funcionalidades que se describen a continuación.
+
+No reconstruyas innecesariamente componentes que ya funcionan.
+
+No introduzcas funcionalidades secundarias, investigaciones o pruebas extensas que consuman recursos sin aportar valor al funcionamiento de la aplicación.
+
+Mi prioridad es conseguir una aplicación funcional, rápida, estable y con una experiencia de usuario fluida.
+
+---
+
+# 1. OBJETIVO GENERAL
+
+La aplicación permitirá buscar emotes de 7TV, seleccionarlos individualmente o en conjunto y convertirlos en stickers compatibles con WhatsApp.
+
+Fuentes principales:
+
+**7TV**
+
+https://7tv.app/
+
+**Documentación de la API**
+
+https://7tv.app/api/docs
+
+**Proyecto de referencia para la conversión**
+
+https://github.com/laggykiller/sticker-convert
+
+**Integración oficial de stickers de WhatsApp**
+
+https://github.com/WhatsApp/stickers
+
+Los usuarios podrán:
+
+- Buscar streamers o creadores de contenido.
+- Buscar emotes por nombre.
+- Visualizar emotes estáticos y animados.
+- Seleccionarlos individualmente.
+- Seleccionar los primeros 30 resultados de una búsqueda.
+- Crear colecciones de hasta 30 stickers.
+- Crear colecciones con imágenes, animaciones o ambas.
+- Guardar las colecciones localmente.
+- Editar las colecciones.
+- Eliminar las colecciones.
+- Recuperar packs eliminados de WhatsApp utilizando los archivos locales.
+- Añadir las colecciones a WhatsApp mediante su integración oficial.
+
+No será necesario crear una cuenta propia de nuestra aplicación.
+
+**IMPORTANTE: una colección corresponderá siempre a un único pack de WhatsApp. No quiero divisiones automáticas, subpacks ni múltiples packs para una misma colección.**
+
+El máximo será de 30 stickers por colección.
+
+---
+
+# 2. TECNOLOGÍAS Y ARQUITECTURA
+
+Utiliza:
+
+- Kotlin.
+- Android nativo.
+- Material Design 3.
+- Android Views y XML.
+- RecyclerView.
+- MVVM.
+- Repository Pattern.
+- Retrofit para las peticiones de red.
+- Kotlin Coroutines.
+- StateFlow para comunicar estados de procesamiento.
+- Room para la persistencia local.
+- WorkManager cuando sea necesario ejecutar operaciones prolongadas en segundo plano.
+- DataStore para preferencias.
+
+Mantén una arquitectura sencilla y bien organizada.
+
+No introduzcas dependencias innecesarias ni arquitecturas excesivamente complejas.
+
+Aprovecha las capacidades nativas de Android siempre que sea posible.
+
+---
+
+# 3. DISEÑO VISUAL
+
+Quiero una aplicación moderna, atractiva y profesional.
+
+La referencia estética principal será:
+
+https://7tv.app/
+
+Quiero una estética inspirada en ella, pero con identidad visual propia.
+
+Características:
+
+- Tema oscuro predeterminado.
+- Fondos oscuros.
+- Colores de acento llamativos.
+- Tarjetas modernas.
+- Bordes ligeramente redondeados.
+- Tipografía legible.
+- Iconos descriptivos.
+- Animaciones suaves.
+- Transiciones fluidas.
+- Cuadrículas atractivas de emotes.
+- Buena distribución del espacio.
+
+No copies logotipos ni elementos de marca protegidos.
+
+La aplicación debe parecer un producto terminado.
+
+---
+
+# 4. IDIOMAS
+
+La aplicación debe estar disponible en español e inglés.
+
+Selecciona automáticamente el idioma según Android:
+
+- Español para dispositivos configurados en español.
+- Inglés para dispositivos configurados en inglés.
+- Inglés como idioma alternativo para otros idiomas.
+
+Permite cambiar manualmente el idioma desde los ajustes.
+
+Traduce todos los textos propios de la aplicación:
+
+- Menús.
+- Botones.
+- Pantallas.
+- Mensajes.
+- Confirmaciones.
+- Indicadores de procesamiento.
+- Errores.
+- Ajustes.
+
+Utiliza los recursos de traducción de Android.
+
+No escribas textos directamente dentro de las clases Kotlin.
+
+---
+
+# 5. PANTALLA PRINCIPAL Y BUSCADORES
+
+La pantalla principal debe incluir una barra superior con:
+
+- Menú lateral a la izquierda.
+- Nombre o logotipo de la aplicación.
+- Elementos visuales modernos.
+
+El menú lateral debe contener:
+
+1. Inicio.
+2. Mis packs de stickers.
+3. Ajustes.
+4. Información de la aplicación.
+
+### Buscadores independientes
+
+En la pantalla de inicio deben aparecer DOS cuadros de búsqueda independientes.
+
+El primero:
+
+**Buscar streamer**
+
+El segundo:
+
+**Buscar emote**
+
+Debajo debe aparecer un único botón:
+
+**Buscar**
+
+Cada campo debe abrir el teclado de Android cuando el usuario lo seleccione.
+
+### Comportamiento al cambiar de buscador
+
+Cuando el usuario pulse el campo Buscar streamer:
+
+- Se convierte en el buscador activo.
+- Se borra automáticamente el contenido de Buscar emote.
+
+Cuando pulse Buscar emote:
+
+- Se convierte en el buscador activo.
+- Se borra automáticamente el contenido de Buscar streamer.
+
+Ejemplo:
+
+1. El usuario selecciona Buscar streamer.
+2. Escribe un nombre.
+3. Realiza la búsqueda.
+4. Decide buscar un emote individual.
+5. Pulsa Buscar emote.
+6. Desaparece automáticamente el texto del otro campo.
+
+No quiero diálogos adicionales ni que el usuario tenga que borrar manualmente el campo anterior.
+
+Cuando pulse Buscar, debe ejecutarse la búsqueda correspondiente al campo activo.
+
+Si el campo activo está vacío, muestra un mensaje indicando que debe introducir texto.
+
+---
+
+# 6. BÚSQUEDA DE STREAMERS
+
+Al introducir un nombre en Buscar streamer, consulta los resultados reales de 7TV.
+
+Los resultados aparecerán debajo del botón de búsqueda.
+
+Utiliza RecyclerView.
+
+Cada resultado mostrará:
+
+- Avatar.
+- Nombre del streamer.
+- Nombre de usuario cuando esté disponible.
+
+El usuario podrá desplazarse y seleccionar el streamer que desea consultar.
+
+Al seleccionarlo, abre una pantalla con sus conjuntos y emotes.
+
+Implementa paginación cuando esté disponible.
+
+---
+
+# 7. BÚSQUEDA DE EMOTES INDIVIDUALES
+
+Al introducir un nombre en Buscar emote, realiza una búsqueda real en 7TV.
+
+Referencia:
+
+https://7tv.app/emotes?q=chiqiuto
+
+Muestra una pantalla de resultados con los emotes que coincidan con la consulta.
+
+El diseño y las funciones deben ser iguales a los de la pantalla de emotes de un streamer.
+
+Cada elemento permitirá:
+
+- Visualizar el emote.
+- Reproducir su animación.
+- Mostrar su nombre.
+- Seleccionarlo o deseleccionarlo.
+
+---
+
+# 8. CARGA PROGRESIVA Y SELECCIÓN DE UN MÁXIMO DE 30 EMOTES
+
+Hay streamers que tienen más de 1.000 emotes.
+
+Ejemplo:
+
+https://7tv.app/users/01FEEQAQM0000409S3FGDM8BN7
+
+No quiero cargar todos sus emotes simultáneamente.
+
+### Paginación
+
+Utiliza inicialmente páginas de aproximadamente 30 emotes.
+
+Funcionamiento:
+
+1. Obtener los primeros 30.
+2. Mostrarlos inmediatamente.
+3. Cuando el usuario se desplace hacia el final, solicitar los siguientes 30.
+4. Añadirlos a continuación.
+5. Repetir hasta que no existan más resultados.
+
+Aplica este comportamiento a las búsquedas de streamers y emotes individuales.
+
+Utiliza la paginación de la API de 7TV.
+
+### Optimización de imágenes
+
+Implementa:
+
+- Carga de miniaturas.
+- Carga bajo demanda.
+- Caché de imágenes.
+- Reutilización de archivos disponibles.
+- Liberación de recursos.
+- Reproducción eficiente de animaciones.
+
+No descargues ni reproduzcas cientos de animaciones simultáneamente.
+
+### Seleccionar primeros 30
+
+Incluye un botón:
+
+**Seleccionar primeros 30**
+
+Al pulsarlo:
+
+- Selecciona exclusivamente los primeros 30 resultados.
+- Respeta el orden de 7TV.
+- No carga los emotes restantes.
+- No descarga sus archivos originales.
+- Actualiza inmediatamente el contador.
+
+Si existen menos de 30, selecciona todos los disponibles.
+
+Identifica cada emote por su ID único de 7TV, nunca por su posición en RecyclerView.
+
+### Límite absoluto de selección
+
+El usuario podrá seleccionar manualmente emotes mientras se desplaza por los resultados, pero el total de elementos seleccionados para una colección nunca podrá superar los 30.
+
+Este límite debe aplicarse también cuando se carguen nuevas páginas.
+
+Si el usuario intenta seleccionar un elemento adicional cuando ya tiene 30 seleccionados:
+
+- No selecciones el nuevo elemento.
+- Mantén intacta la selección existente.
+- Muestra un mensaje breve indicando que el máximo permitido es de 30 stickers.
+
+No permitas crear colecciones de más de 30 elementos.
+
+Aplica este mismo límite durante la edición de colecciones existentes.
+
+**No quiero generar múltiples packs ni dividir automáticamente los resultados de una búsqueda. Una selección corresponde siempre a una única colección y a un único pack de WhatsApp.**
+
+---
+
+# 9. CONEXIÓN CON LA API DE 7TV
+
+Utiliza la API actual:
+
+https://7tv.app/api/docs
+
+Repositorio:
+
+https://github.com/SevenTV/SevenTV
+
+La integración debe permitir:
+
+- Buscar usuarios.
+- Obtener información de usuarios.
+- Consultar sus conjuntos públicos de emotes.
+- Consultar los emotes de cada conjunto.
+- Buscar emotes individualmente.
+- Obtener identificadores y nombres.
+- Obtener las imágenes disponibles.
+- Identificar emotes estáticos y animados.
+- Obtener información de actualización disponible.
+
+Si un streamer tiene varios conjuntos públicos, todos deben poder consultarse.
+
+Incluye un filtro para cambiar entre conjuntos.
+
+Selecciona la variante de mejor calidad disponible. 7TV puede proporcionar formatos como WebP y AVIF; no presupongas que todos los originales son GIF.
+
+Evita el scraping del HTML.
+
+Implementa solamente las peticiones necesarias para las búsquedas y descargas.
+
+---
+
+# 10. CREACIÓN DE COLECCIONES
+
+Cuando el usuario seleccione los emotes y pulse Crear pack, abre:
+
+**Nueva colección de stickers**
+
+Debe permitir:
+
+- Introducir el nombre de la colección.
+- Visualizar los emotes seleccionados.
+- Consultar el número de imágenes y animaciones.
+- Quitar elementos.
+- Confirmar la creación.
+
+El usuario podrá crear colecciones con cualquier combinación de imágenes estáticas y animaciones.
+
+Cada colección podrá contener entre 1 y 30 stickers.
+
+No obligues a crear colecciones independientes manualmente.
+
+### Mínimo para WhatsApp
+
+No apliques el mínimo de tres stickers al proceso de creación local.
+
+Basta con un sticker seleccionado para crear y guardar una colección.
+
+Ejemplos:
+
+- 20 imágenes estáticas: permitido.
+- 3 GIF: permitido.
+- 2 imágenes y 1 GIF: permitido.
+- 1 imagen: permitido.
+- 2 GIF: permitido.
+
+Todas deben poder descargarse, convertirse y guardarse localmente.
+
+La restricción de un mínimo de tres stickers se comprobará únicamente cuando se intente añadir el pack a WhatsApp.
+
+Una colección de uno o dos stickers podrá guardarse y editarse, pero deberá completarse antes de exportarla.
+
+---
+
+# 11. SISTEMA DE CONVERSIÓN BASADO EN STICKER-CONVERT
+
+Esta es una de las partes más importantes.
+
+Quiero utilizar como referencia técnica el funcionamiento real de:
+
+https://github.com/laggykiller/sticker-convert
+
+Estudia su código fuente y su configuración específica para WhatsApp.
+
+No quiero un conversor básico que simplemente redimensione imágenes y las comprima.
+
+Quiero aprovechar sus técnicas de conversión y optimización.
+
+### Técnicas que deben aprovecharse
+
+- Compresión adaptativa.
+- Búsqueda iterativa de parámetros.
+- Optimización de calidad.
+- Ajuste de resolución.
+- Control de FPS.
+- Optimización de duración.
+- Escalado de imágenes.
+- Conservación de transparencia.
+- Cuantización de colores.
+- Generación de WebP animado.
+
+Presta especial atención a sus parámetros:
+
+- quality-min y quality-max.
+- quality-power.
+- fps-min y fps-max.
+- fps-power.
+- res-min y res-max.
+- res-power.
+- scale-filter.
+- quantize-method.
+- vid-size-max.
+- img-size-max.
+- duration-max.
+- steps.
+
+Estudia especialmente su técnica de búsqueda iterativa para encontrar los mejores parámetros de compresión que permitan cumplir el límite de tamaño sin reducir innecesariamente la calidad.
+
+### Adaptación a Android
+
+El proyecto original está escrito en Python y no es una biblioteca Android nativa.
+
+Adapta sus técnicas utilizando bibliotecas compatibles con Android.
+
+Evita incorporar un intérprete Python completo o dependencias pesadas cuando exista una alternativa eficiente.
+
+No ejecutes un servidor externo para convertir los stickers.
+
+Todo el procesamiento debe realizarse localmente en el dispositivo.
+
+Respeta la licencia GPL-2.0 del proyecto. No copies código protegido sin cumplir sus obligaciones de distribución.
+
+El objetivo es conseguir un proceso de conversión comparable al de sticker-convert, optimizado para Android.
+
+---
+
+# 12. COLECCIONES MIXTAS MEDIANTE FAKE-VID
+
+Quiero aprovechar la opción `fake-vid` de sticker-convert.
+
+En su documentación se indica que convierte imágenes estáticas en vídeos para permitir su combinación con stickers animados dentro de un mismo pack.
+
+Referencia:
+
+https://github.com/laggykiller/sticker-convert
+
+**IMPORTANTE: quiero que adaptes esta funcionalidad para generar UN ÚNICO PACK ANIMADO cuando el usuario seleccione imágenes y GIF simultáneamente.**
+
+### 12.1. Colecciones exclusivamente estáticas
+
+Cuando una colección contenga únicamente imágenes:
+
+- Convertirlas a WebP estático.
+- No utilizar fake-vid.
+- Mantener transparencia y colores.
+- Respetar el máximo de 100 KB por sticker.
+
+### 12.2. Colecciones exclusivamente animadas
+
+Cuando una colección contenga únicamente GIF u otros emotes animados:
+
+- Convertirlos a WebP animado.
+- Conservar sus fotogramas y movimientos.
+- Mantener transparencia y colores.
+- Respetar el máximo de 500 KB por sticker.
+
+### 12.3. Colecciones mixtas
+
+Cuando una colección contenga imágenes estáticas y emotes animados, quiero generar UN ÚNICO PACK ANIMADO de WhatsApp.
+
+Para ello:
+
+1. Las imágenes estáticas deberán convertirse mediante fake-vid.
+2. Cada imagen estática debe generar un WebP animado real con varios fotogramas idénticos.
+3. La imagen debe permanecer visualmente inmóvil, sin movimientos, transiciones, efectos ni cambios de color.
+4. Los GIF y otros emotes animados deben conservar sus animaciones originales.
+5. Todos los archivos finales deben ser WebP animados.
+6. El pack debe marcarse como animado en la integración de WhatsApp.
+
+No basta con cambiar la extensión de un archivo estático ni marcar el pack como animado en los metadatos.
+
+Cada imagen estática debe convertirse realmente en una animación WebP con más de un fotograma para que el pack resultante cumpla las condiciones del formato animado.
+
+Utiliza duraciones de fotograma válidas, sin alterar visualmente el contenido.
+
+La animación artificial de una imagen estática debe permanecer visualmente inmóvil y estable cuando se reproduzca en bucle.
+
+Comprueba que el resultado sea compatible con el decodificador de WebP animado utilizado por WhatsApp.
+
+**Ejemplo: 2 imágenes estáticas y 1 GIF**
+
+El usuario selecciona:
+
+- Imagen A.
+- Imagen B.
+- GIF C.
+
+La aplicación convierte las imágenes A y B a WebP animado mediante fake-vid y convierte el GIF C a WebP animado normal.
+
+El resultado será un único pack animado de tres stickers que se podrá añadir a WhatsApp.
+
+**Ejemplo: 20 imágenes estáticas y 10 GIF**
+
+Se convertirán todos los elementos a WebP animado y se generará un único pack animado de 30 stickers.
+
+### 12.4. Caché de conversiones según el formato de salida
+
+Un mismo emote puede utilizarse:
+
+- Como WebP estático en una colección exclusivamente estática.
+- Como WebP animado artificial mediante fake-vid en una colección mixta.
+
+Por tanto, la caché debe diferenciar las variantes según su formato de salida.
+
+No reutilices un WebP estático donde se necesita un WebP animado.
+
+Siempre que sea posible, conserva el archivo original descargado para generar las distintas variantes sin volver a descargarlo.
+
+---
+
+# 13. REQUISITOS TÉCNICOS DE LOS STICKERS
+
+### Estáticos
+
+- WebP.
+- 512 × 512 píxeles.
+- Máximo 100 KB.
+- Transparencia conservada.
+- Colores originales.
+- Sin bordes blancos añadidos.
+- Sin sombras artificiales.
+- Sin fondos artificiales.
+- Sin deformaciones.
+- Sin recortes innecesarios.
+
+### Animados
+
+- WebP animado real.
+- 512 × 512 píxeles.
+- Máximo 500 KB.
+- Duración máxima de 10 segundos.
+- Duración mínima de 8 ms por fotograma.
+- Transparencia conservada.
+- Colores originales.
+- Movimiento conservado.
+- Sin bordes blancos añadidos.
+- Sin fondos artificiales.
+
+### Optimización de calidad
+
+Prioridades:
+
+1. Fidelidad visual.
+2. Conservación de transparencia.
+3. Fluidez de animación.
+4. Conservación de fotogramas.
+5. Tamaño compatible con WhatsApp.
+
+No reduzcas automáticamente los FPS si puedes alcanzar el tamaño necesario mediante compresión.
+
+No utilices una calidad fija para todos los emotes.
+
+Optimiza individualmente cada archivo.
+
+Cuando ya cumpla los requisitos, no lo comprimas innecesariamente.
+
+Para reducir el tamaño, intenta primero ajustes de compresión y calidad.
+
+Reduce FPS solamente cuando sea necesario.
+
+Si una animación supera los 10 segundos, permite recortarla.
+
+No conviertas animaciones en imágenes estáticas silenciosamente.
+
+### Icono del pack
+
+Genera un único icono de bandeja para el pack:
+
+- Estático.
+- 96 × 96 píxeles.
+- Máximo 50 KB.
+
+---
+
+# 14. ORGANIZACIÓN DE PACKS PARA WHATSAPP: UN ÚNICO PACK DE HASTA 30 STICKERS
+
+Esta sección sustituye cualquier sistema anterior de división, separación o creación de subpacks.
+
+**Quiero que cada colección corresponda a un único pack de WhatsApp.**
+
+No quiero complicar la aplicación creando dos packs para una misma colección ni utilizando subpacks.
+
+El usuario seleccionará hasta 30 emotes, los convertirá y podrá añadir el resultado a WhatsApp como un único pack.
+
+### Límites
+
+Cada colección podrá contener:
+
+- Mínimo de 1 sticker para guardarse localmente.
+- Máximo de 30 stickers en total.
+
+Para poder añadirla a WhatsApp, deberá cumplir el mínimo de 3 stickers y los demás requisitos de compatibilidad.
+
+### Comportamiento según el contenido
+
+**Colección exclusivamente estática:**
+
+Todos los stickers serán WebP estáticos y formarán un único pack estático.
+
+**Colección exclusivamente animada:**
+
+Todos los stickers serán WebP animados y formarán un único pack animado.
+
+**Colección mixta:**
+
+Las imágenes estáticas se convertirán mediante fake-vid en WebP animados. Los GIF conservarán su animación.
+
+Todos los archivos resultantes serán WebP animados y formarán un único pack animado.
+
+### Ejemplos
+
+| Selección | Resultado |
+|---|---|
+| 30 imágenes | 1 pack estático |
+| 30 GIF | 1 pack animado |
+| 20 imágenes + 10 GIF | 1 pack animado |
+| 2 imágenes + 1 GIF | 1 pack animado |
+| 15 imágenes + 15 GIF | 1 pack animado |
+
+No dividas automáticamente una colección de 30 elementos.
+
+No crees varios packs para una misma colección.
+
+No generes subpacks.
+
+No permitas seleccionar un elemento número 31.
+
+No intentes introducir archivos estáticos reales dentro de un pack animado.
+
+La conversión fake-vid debe transformar previamente las imágenes estáticas de una colección mixta para que todos los archivos sean técnicamente WebP animados.
+
+**El objetivo es mantener la experiencia más sencilla posible: una selección, una colección y un único pack de WhatsApp.**
+
+---
+
+# 15. PANTALLA DE PROCESAMIENTO
+
+Al pulsar Descargar y convertir, muestra:
+
+**Procesando pack de stickers**
+
+Debe incluir una barra de progreso real y tres indicadores:
+
+- Procesados.
+- Pendientes.
+- Con error.
+
+Cada sticker tendrá estos estados:
+
+- Pendiente.
+- Descargando.
+- Convirtiendo.
+- Validando.
+- Completado.
+- Error.
+
+Los contadores deben actualizarse conforme termina cada operación.
+
+Los archivos reutilizados directamente desde la caché deben contabilizarse como completados, sin repetir operaciones.
+
+Los errores individuales no deben detener el proceso completo.
+
+Permite reintentar únicamente los elementos fallidos.
+
+Al terminar, navega automáticamente a la pantalla de resumen.
+
+Utiliza Coroutines y StateFlow.
+
+No añadas una arquitectura de procesos en segundo plano innecesariamente compleja.
+
+---
+
+# 16. PANTALLA DE RESUMEN DE LA COLECCIÓN
+
+Al finalizar el procesamiento, muestra:
+
+- Nombre de la colección.
+- Vista previa de stickers.
+- Número total de stickers.
+- Número de imágenes originales.
+- Número de animaciones originales.
+- Formato final del pack.
+- Resultado del procesamiento.
+
+Incluye tres acciones:
+
+### A. Enviar a WhatsApp
+
+Inicia la integración real mediante el ContentProvider oficial.
+
+Debe existir un único botón para enviar la colección completa.
+
+No descargues ni conviertas nada durante la exportación.
+
+La aplicación debe utilizar los archivos locales que ya estén procesados.
+
+No debe aparecer una pantalla para elegir entre subpacks ni opciones para exportar los stickers por separado.
+
+### B. Editar pack
+
+Permite modificar la colección, recuperando todos los emotes seleccionados.
+
+El usuario puede añadir o eliminar stickers, respetando siempre el máximo de 30.
+
+Al guardar, actualiza la colección original y regresa al resumen actualizado.
+
+No crees una colección duplicada.
+
+Si el usuario convierte una colección mixta en una colección exclusivamente estática o animada, vuelve a generar únicamente los archivos que necesiten cambiar de formato, reutilizando los originales y la caché siempre que sea posible.
+
+### C. Cancelar creación
+
+Solicita confirmación.
+
+Al cancelar:
+
+- Elimina el borrador.
+- Limpia los archivos temporales innecesarios.
+- Conserva la caché compartida.
+- Si era una edición, conserva intacta la colección anterior.
+
+---
+
+# 17. MIS PACKS DE STICKERS
+
+Incluye la sección:
+
+**Mis packs de stickers**
+
+Muestra todas las colecciones creadas.
+
+Cada tarjeta mostrará:
+
+- Icono.
+- Nombre.
+- Número de stickers.
+- Número de imágenes originales.
+- Número de animaciones originales.
+- Fecha de creación.
+
+Al abrir una colección, el usuario podrá:
+
+### A. Añadir a WhatsApp
+
+Permite recuperar una colección eliminada de WhatsApp.
+
+Utiliza los archivos guardados localmente.
+
+No vuelvas a descargar ni convertir los emotes.
+
+La importación debe realizarse como un único pack.
+
+### B. Editar
+
+Recupera la búsqueda original.
+
+Debe conservar:
+
+- Identificador del streamer.
+- Nombre.
+- Conjunto de emotes.
+- Tipo de búsqueda.
+- Identificadores de los stickers seleccionados.
+- Orden original de los elementos.
+
+Los emotes de la colección deben aparecer seleccionados aunque todavía no se hayan cargado mediante paginación.
+
+Si un emote ya no existe en 7TV, pero conservamos su archivo local, debe seguir apareciendo dentro de la colección y poder eliminarse manualmente.
+
+La edición debe permitir añadir, retirar y mantener stickers sin repetir conversiones innecesarias.
+
+El número total de elementos seleccionados nunca podrá superar 30.
+
+Al guardar, actualiza la colección original.
+
+### C. Eliminar
+
+Elimina la colección de nuestra aplicación previa confirmación.
+
+No elimines archivos compartidos que sigan siendo utilizados por otras colecciones.
+
+Eliminar una colección de nuestra aplicación no implica eliminarla automáticamente de WhatsApp.
+
+**No quiero sistemas de subpacks ni divisiones automáticas en esta pantalla.**
+
+---
+
+# 18. CACHÉ COMPARTIDA Y ALMACENAMIENTO LOCAL
+
+Utiliza Room para metadatos y almacenamiento privado de Android para archivos multimedia.
+
+La caché debe ser global y compartida entre todas las colecciones.
+
+Almacena:
+
+- ID único del emote.
+- Información de su versión.
+- URL de origen.
+- Formato original.
+- Archivo original descargado cuando esté disponible.
+- Variantes WebP generadas.
+- Tipo de conversión.
+- Versión del conversor.
+- Referencias a las colecciones que utilizan cada archivo.
+
+### Reutilización
+
+Cuando un emote vuelva a seleccionarse:
+
+1. Busca su ID en la caché.
+2. Compara los metadatos disponibles de su versión.
+3. Si existe una variante compatible, reutilízala.
+4. Si solo existe el original descargado, genera la variante necesaria localmente.
+5. Si no existe una versión válida, descárgalo y conviértelo.
+
+Si el emote se actualiza en 7TV, crea una nueva versión.
+
+Utiliza updatedAt y los datos de imagen disponibles en las consultas normales de la API.
+
+No realices peticiones HEAD individuales ni consultas adicionales por emote.
+
+No elimines una conversión que siga siendo utilizada por otras colecciones.
+
+La recuperación de colecciones debe funcionar sin Internet, siempre que los archivos estén almacenados localmente.
+
+---
+
+# 19. INTEGRACIÓN OFICIAL CON WHATSAPP
+
+Utiliza como referencia obligatoria:
+
+https://github.com/WhatsApp/stickers
+
+Implementa la integración Android utilizando su mecanismo oficial.
+
+Presta especial atención a:
+
+- ContentProvider.
+- AndroidManifest.xml.
+- Autoridad del proveedor.
+- Permisos de lectura.
+- Identificadores.
+- Metadatos.
+- Archivos multimedia.
+- Consultas del proveedor.
+- Intent de importación.
+- Gestión del resultado.
+
+Comprueba especialmente:
+
+- Que las URI del proveedor sean correctas.
+- Que los metadatos coincidan con los archivos disponibles.
+- Que cada sticker tenga al menos un emoji asociado.
+- Que los identificadores sean únicos y estables.
+- Que los packs animados estén marcados correctamente.
+- Que los WebP animados tengan más de un fotograma.
+- Que los archivos sean accesibles por WhatsApp.
+
+Utiliza la acción oficial:
+
+com.whatsapp.intent.action.ENABLE_STICKER_PACK
+
+Con los parámetros:
+
+- sticker_pack_id.
+- sticker_pack_authority.
+- sticker_pack_name.
+
+### Compatibilidad de colecciones mixtas
+
+Cuando una colección sea mixta, el ContentProvider debe identificarla como un pack animado.
+
+Todos sus archivos deben ser WebP animados reales, incluidos los que procedan de imágenes estáticas convertidas mediante fake-vid.
+
+No devuelvas archivos estáticos dentro de ese pack.
+
+No sustituyas la integración oficial por el mecanismo de subida de sticker-convert.
+
+### Evitar errores de importación
+
+Quiero evitar errores como:
+
+"There is a problem with the sticker pack. Couldn't add to whatsapp"
+
+Y:
+
+"handleStickerPackPreviewResult/failed"
+
+La integración debe seguir el contrato oficial de WhatsApp.
+
+No simules una importación satisfactoria.
+
+Muestra un mensaje de éxito únicamente cuando WhatsApp confirme el resultado.
+
+---
+
+# 20. NOMBRE DEL AUTOR DE LOS PACKS
+
+El usuario podrá elegir el nombre de su colección.
+
+Sin embargo, el autor del pack de WhatsApp debe ser siempre el nombre de nuestra aplicación.
+
+No debe poder editarlo el usuario.
+
+Centraliza el nombre del autor en una única configuración del proyecto.
+
+Actualmente el nombre de la aplicación es provisional. Cuando establezcamos su nombre definitivo, solamente tendremos que modificar ese valor.
+
+Utiliza el mismo autor para todas las colecciones.
+
+---
+
+# 21. LICENCIA DE ESTA PRIMERA VERSIÓN
+
+La premisa de licencia del proyecto será Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0).
+
+https://creativecommons.org/licenses/by-sa/3.0/
+
+No quiero que desarrolles sistemas de investigación de licencias individuales.
+
+No realices consultas adicionales para investigar los derechos de cada emote.
+
+No ocultes emotes por falta de información.
+
+No bloquees su selección, descarga, conversión o almacenamiento por este motivo.
+
+No añadas confirmaciones legales repetitivas.
+
+La revisión jurídica profesional se realizará posteriormente, fuera de la aplicación y antes de una posible publicación.
+
+Esta premisa no debe generar peticiones adicionales ni afectar al rendimiento.
+
+La aplicación será independiente y no afirmará estar afiliada a 7TV o WhatsApp.
+
+---
+
+# 22. AJUSTES
+
+Incluye:
+
+- Idioma.
+- Información del almacenamiento utilizado.
+- Gestión de caché.
+- Información de la aplicación.
+- Información de 7TV.
+- Política de privacidad.
+
+No añadas funcionalidades secundarias que compliquen la primera versión.
+
+---
+
+# 23. RENDIMIENTO
+
+La aplicación debe funcionar fluidamente.
+
+Prioriza:
+
+- Paginación.
+- Miniaturas.
+- Caché de imágenes.
+- Reproducción eficiente de animaciones.
+- Caché de originales y conversiones.
+- Reutilización de archivos.
+- Descargas bajo demanda.
+- Procesamiento eficiente.
+- Gestión de memoria.
+- Peticiones de red mínimas.
+
+No descargues todos los emotes de un streamer al abrir su perfil.
+
+No vuelvas a descargar archivos ya almacenados.
+
+No repitas conversiones que ya estén disponibles.
+
+No ejecutes comprobaciones externas de licencias.
+
+No incorpores dependencias pesadas sin necesidad.
+
+No añadas generación de subpacks ni sistemas de división de colecciones.
+
+Mantén el límite máximo de 30 elementos desde la propia selección para evitar trabajo innecesario.
+
+---
+
+# 24. DESARROLLO Y FINALIZACIÓN
+
+Implementa las funcionalidades directamente en el proyecto Android Studio utilizando las herramientas disponibles en Google AI Studio.
+
+No te limites a entregar fragmentos de código o interfaces visuales.
+
+Los botones deben ejecutar sus funciones reales.
+
+No gastes recursos en:
+
+- Auditorías extensas.
+- Benchmarks prolongados.
+- Pruebas masivas con miles de emotes.
+- Descargas repetidas de archivos.
+- Comprobaciones externas innecesarias.
+- Informes técnicos extensos.
+- Documentación secundaria.
+- Funcionalidades no solicitadas.
+
+Realiza las comprobaciones esenciales para asegurar que el proyecto compila y que los componentes principales están conectados.
+
+Dedica especial atención a que fake-vid genere realmente WebP animados compatibles con WhatsApp.
+
+Si no existe un dispositivo físico con WhatsApp para probar la importación, no afirmes que se ha probado. Deja implementada la integración oficial y explica brevemente qué requiere una comprobación externa.
+
+No elimines datos existentes ni reinicies Room.
+
+Conserva las colecciones, archivos y preferencias.
+
+No cambies innecesariamente el nombre del paquete Android ni la configuración del proyecto.
+
+---
+
+# RESULTADO FINAL
+
+Quiero una aplicación Android completa que permita:
+
+1. Buscar streamers en 7TV.
+2. Buscar emotes por nombre.
+3. Cargar resultados progresivamente.
+4. Seleccionar los primeros 30 resultados.
+5. Seleccionar manualmente un máximo de 30 emotes.
+6. Visualizar emotes animados y estáticos.
+7. Crear colecciones mixtas de hasta 30 elementos.
+8. Convertir imágenes estáticas a animaciones mediante fake-vid cuando la colección sea mixta.
+9. Conservar los GIF como animaciones.
+10. Crear un único pack de WhatsApp por colección.
+11. Mantener la máxima calidad gráfica y de movimiento posible.
+12. Utilizar WebP como formato final.
+13. Guardar todas las colecciones localmente.
+14. Reutilizar conversiones entre colecciones.
+15. Detectar actualizaciones mediante los metadatos disponibles.
+16. Editar colecciones conservando la selección original.
+17. Eliminar colecciones.
+18. Recuperar packs eliminados de WhatsApp.
+19. Mostrar progreso real durante las conversiones.
+20. Integrar los packs mediante el ContentProvider oficial de WhatsApp.
+21. Utilizar siempre el nombre de nuestra aplicación como autor.
+22. Disponer de una interfaz en español e inglés.
+
+**PRIORIDAD ABSOLUTA:**
+
+El flujo completo debe funcionar:
+
+BUSCAR → SELECCIONAR (MÁXIMO 30) → CREAR COLECCIÓN → DESCARGAR → CONVERTIR → GUARDAR → AÑADIR A WHATSAPP.
+
+Una colección debe corresponder a un único pack de WhatsApp. No quiero subpacks, divisiones automáticas ni varios packs para una misma colección.
+
+No sacrifiques funcionalidad por estética, no añadas complejidad innecesaria y no gastes recursos en tareas secundarias.
+
+Quiero una aplicación estable, rápida, intuitiva y preparada para evolucionar hasta su publicación en Google Play Store.

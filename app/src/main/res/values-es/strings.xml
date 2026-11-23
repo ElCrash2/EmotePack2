@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EmotePack</string>
+    <string name="app_tagline">Emotes de 7TV a stickers de WhatsApp</string>
+
+    <!-- Navigation & Drawer -->
+    <string name="nav_menu_open">Abrir menú de navegación</string>
+    <string name="nav_back">Volver</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_my_packs">Mis packs de stickers</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_app_info">Información de la aplicación</string>
+
+    <!-- Home Screen & Dual Search -->
+    <string name="home_hero_title">Crea packs de stickers para WhatsApp</string>
+    <string name="home_hero_subtitle">Busca streamers o emotes individuales en 7TV, elige hasta 30 favoritos y expórtalos juntos en un solo pack de WhatsApp.</string>
+    <string name="search_streamer_label">Buscar streamer</string>
+    <string name="search_streamer_hint">Nombre del canal o creador (ej. Rubius, IlloJuan)</string>
+    <string name="search_emote_label">Buscar emote</string>
+    <string name="search_emote_hint">Nombre del emote (ej. peepoHappy, chiqiuto)</string>
+    <string name="search_button">Buscar</string>
+    <string name="search_empty_validation">Debes escribir el nombre de un streamer o un emote antes de buscar.</string>
+    <string name="search_active_mode_streamer">Búsqueda activa: Streamer</string>
+    <string name="search_active_mode_emote">Búsqueda activa: Emote</string>
+    <string name="search_results_streamers_title">Streamers encontrados</string>
+    <string name="search_no_streamers_found">No se encontraron streamers para \"%1$s\".</string>
+    <string name="search_loading_streamers">Buscando usuarios en 7TV…</string>
+    <string name="search_load_more">Cargar más</string>
+    <string name="streamer_username_handle">@%1$s</string>
+    <string name="streamer_sets_count">%1$d conjuntos de emotes</string>
+
+    <!-- Streamer Emotes & Emote Search Grids -->
+    <string name="streamer_emotes_title">%1$s</string>
+    <string name="emote_search_title">Emotes: %1$s</string>
+    <string name="filter_all_sets">Todos los conjuntos (%1$d)</string>
+    <string name="select_first_30">Seleccionar primeros 30</string>
+    <string name="selected_count_format">%1$d / 30 seleccionados</string>
+    <string name="max_30_stickers_reached">Límite alcanzado: WhatsApp permite un máximo de 30 stickers por pack.</string>
+    <string name="create_pack_action">Crear pack</string>
+    <string name="save_edits_action">Guardar cambios</string>
+    <string name="badge_animated">ANIM</string>
+    <string name="badge_static">IMG</string>
+    <string name="no_emotes_found">No se encontraron emotes.</string>
+    <string name="loading_emotes">Cargando emotes…</string>
+    <string name="loading_emote_set">Cargando conjunto de emotes…</string>
+    <string name="select_at_least_one">Selecciona al menos un emote para crear un pack.</string>
+    <string name="editing_banner">Editando \"%1$s\" — %2$d / 30 seleccionados</string>
+    <string name="new_search_prompt">Buscar otro emote</string>
+
+    <!-- Create / Review Collection Screen -->
+    <string name="create_collection_title">Nuevo pack de stickers</string>
+    <string name="edit_collection_title">Editar pack de stickers</string>
+    <string name="collection_name_label">Nombre de la colección</string>
+    <string name="collection_name_hint">Introduce un nombre para tu pack de stickers</string>
+    <string name="collection_name_required">Por favor, introduce un nombre para la colección.</string>
+    <string name="summary_total">Total: %1$d</string>
+    <string name="summary_animated">Animados: %1$d</string>
+    <string name="summary_static">Estáticos: %1$d</string>
+    <string name="whatsapp_split_preview_title">Formato único para WhatsApp</string>
+    <string name="pack_format_static">Pack estático WebP (512×512, ≤100 KB por sticker).</string>
+    <string name="pack_format_animated">Pack animado WebP (512×512, ≤500 KB por sticker).</string>
+    <string name="pack_format_mixed_fake_vid">Selección mixta: los estáticos se convertirán con fake-vid a WebP animado sin movimiento para exportar los %1$d stickers juntos en 1 solo pack de WhatsApp.</string>
+    <string name="whatsapp_draft_warning">Nota: Puedes guardar un borrador local con 1–2 stickers, pero necesitarás al menos 3 stickers para enviarlo a WhatsApp.</string>
+    <string name="confirm_create_pack">Descargar y convertir</string>
+    <string name="confirm_update_pack">Guardar y regenerar pack</string>
+    <string name="remove_emote_cd">Quitar %1$s</string>
+    <string name="insufficient_storage_error">Espacio libre insuficiente en el dispositivo (se necesitan al menos %1$d MB).</string>
+
+    <!-- Download & Conversion Progress -->
+    <string name="build_progress_title">Procesando pack de stickers</string>
+    <string name="progress_counts_format">%1$d procesados • %2$d pendientes • %3$d con error</string>
+    <string name="status_pending">Pendiente</string>
+    <string name="status_downloading">Descargando original…</string>
+    <string name="status_converting">Convirtiendo a WebP…</string>
+    <string name="status_validating">Validando límites…</string>
+    <string name="status_completed">Listo (%1$d KB)</string>
+    <string name="status_failed">Error: %1$s</string>
+    <string name="status_needs_trim">Supera 10s (%1$.1fs)</string>
+    <string name="status_cancelled">Cancelado</string>
+    <string name="retry_failed">Reintentar fallidos</string>
+    <string name="cancel_operation">Cancelar creación</string>
+    <string name="view_created_pack">Ver resumen</string>
+    <string name="notification_channel_name">Descargas de packs de stickers</string>
+    <string name="notification_channel_desc">Muestra el progreso mientras se descargan y convierten emotes de 7TV</string>
+    <string name="notification_progress_title">Creando \"%1$s\"</string>
+    <string name="notification_progress_body">%1$d de %2$d emotes procesados</string>
+
+    <!-- Duration >10s Dialog -->
+    <string name="trim_dialog_title">La animación supera los 10 segundos</string>
+    <string name="trim_dialog_message">El emote \"%1$s\" dura %2$.1f segundos y WhatsApp limita los stickers animados a 10.0 segundos. ¿Deseas recortarlo a 10 segundos para incluirlo?</string>
+    <string name="trim_one_button">Recortar a 10s</string>
+    <string name="trim_all_button">Recortar todos &gt;10s</string>
+    <string name="skip_emote_button">Omitir emote</string>
+
+    <!-- My Sticker Packs & Collection Summary / Detail -->
+    <string name="my_packs_title">Mis packs de stickers</string>
+    <string name="my_packs_empty_title">Aún no tienes packs</string>
+    <string name="my_packs_empty_subtitle">Busca un streamer o emote de 7TV desde Inicio para crear tu primer pack de stickers sin conexión.</string>
+    <string name="my_packs_go_home">Explorar emotes de 7TV</string>
+    <string name="pack_card_counts">%1$d en total • %2$d anim. • %3$d estát.</string>
+    <string name="pack_card_date">Creado el %1$s</string>
+    <string name="pack_status_ready">Listo</string>
+    <string name="pack_status_draft">Borrador (&lt;3 stickers)</string>
+    <string name="pack_status_processing">Procesando…</string>
+    <string name="pack_status_partial">Completado con avisos</string>
+    <string name="resume_progress_banner">Proceso en curso o pausado: %1$s (%2$d/%3$d)</string>
+
+    <string name="collection_detail_stickers_title">Stickers del pack (%1$d / 30)</string>
+    <string name="send_to_whatsapp">Enviar a WhatsApp</string>
+    <string name="add_to_whatsapp">Añadir a WhatsApp</string>
+    <string name="already_in_whatsapp">Añadido en WhatsApp (Reimportar)</string>
+    <string name="pack_draft_too_few">Falta(n) %1$d sticker(s) más para poder enviarlo a WhatsApp (mínimo 3 stickers).</string>
+    <string name="pack_invalid_assets">Error de validación en \"%1$s\". Edita o reintenta la conversión antes de enviarlo.</string>
+    <string name="detail_format_static">Formato del pack: WebP estático</string>
+    <string name="detail_format_animated">Formato del pack: WebP animado</string>
+    <string name="detail_format_mixed">Formato del pack: WebP animado mixto (fake-vid en estáticos)</string>
+    <string name="summary_processing_ready">Los %1$d stickers se procesaron y validaron localmente.</string>
+    <string name="summary_processing_partial">%1$d stickers listos • %2$d con error u omitidos.</string>
+    <string name="edit_collection">Editar pack</string>
+    <string name="delete_collection">Eliminar</string>
+    <string name="cancel_creation">Cancelar creación</string>
+
+    <!-- Cancel Creation Confirmation -->
+    <string name="cancel_creation_title">¿Cancelar creación del pack?</string>
+    <string name="cancel_creation_new_message">Se descartará el pack \"%1$s\". Los archivos compartidos en caché usados por otros packs se mantendrán intactos.</string>
+    <string name="cancel_creation_edit_message">Se descartarán los cambios y \"%1$s\" volverá a su estado guardado anterior.</string>
+    <string name="confirm_cancel_creation">Descartar cambios</string>
+    <string name="keep_editing">Conservar pack</string>
+
+    <!-- WhatsApp Integration & Diagnostics -->
+    <string name="whatsapp_not_installed">Ni WhatsApp ni WhatsApp Business están instalados en este dispositivo.</string>
+    <string name="whatsapp_incompatible">La versión instalada de WhatsApp no es compatible con packs de stickers de terceros.</string>
+    <string name="whatsapp_choose_app">Elegir aplicación de WhatsApp</string>
+    <string name="whatsapp_personal">WhatsApp</string>
+    <string name="whatsapp_business">WhatsApp Business</string>
+    <string name="whatsapp_add_confirmed">Pack de stickers añadido a WhatsApp.</string>
+    <string name="whatsapp_add_cancelled">La importación no fue confirmada en WhatsApp.</string>
+    <string name="whatsapp_add_error">No se pudo iniciar la importación en WhatsApp: %1$s</string>
+    <string name="whatsapp_compatibility_status">WhatsApp: %1$s • WhatsApp Business: %2$s</string>
+    <string name="status_installed">Instalado</string>
+    <string name="status_not_installed">No instalado</string>
+
+    <!-- Delete Confirmation -->
+    <string name="delete_dialog_title">¿Eliminar \"%1$s\"?</string>
+    <string name="delete_dialog_message">Esta acción eliminará la colección de EmotePack. Los archivos compartidos en caché que sigan usando otros packs no se eliminarán.\n\nImportante: Eliminar un pack de esta aplicación no garantiza que desaparezca de WhatsApp; los packs ya importados en WhatsApp también deben gestionarse dentro de WhatsApp.</string>
+    <string name="confirm_delete">Eliminar</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- Backup Export / Import -->
+    <string name="backup_export">Exportar copia</string>
+    <string name="backup_import">Importar copia</string>
+    <string name="backup_export_success">Copia exportada (%1$d colecciones).</string>
+    <string name="backup_export_empty">No hay colecciones para exportar.</string>
+    <string name="backup_import_success">Se importaron %1$d colección(es) sin conexión.</string>
+    <string name="backup_error">Error en la copia de seguridad: %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_language_section">Idioma</string>
+    <string name="settings_language_current">Idioma actual: %1$s</string>
+    <string name="lang_system">Automático del sistema (ES / EN)</string>
+    <string name="lang_es">Español</string>
+    <string name="lang_en">English</string>
+
+    <string name="settings_storage_section">Almacenamiento local y caché</string>
+    <string name="settings_storage_collections">Packs guardados y variantes: %1$s</string>
+    <string name="settings_storage_cache">Descargas originales y caché API: %1$s</string>
+    <string name="settings_storage_free">Espacio libre disponible: %1$s</string>
+    <string name="settings_clear_cache">Limpiar caché sin uso</string>
+    <string name="settings_cache_cleared">Caché sin uso limpiada (packs guardados conservados).</string>
+    <string name="settings_backup_section">Copia de seguridad entre dispositivos</string>
+    <string name="settings_about_section">Acerca de y aspectos legales</string>
+    <string name="settings_7tv_info">Información de 7TV</string>
+    <string name="settings_7tv_desc">Utiliza la API oficial v3 de 7TV para consultar creadores, conjuntos de emotes y variantes de máxima calidad sin scraping HTML.</string>
+    <string name="settings_privacy_policy">Política de privacidad</string>
+
+    <!-- App Info & Privacy Policy -->
+    <string name="info_version">Versión %1$s</string>
+    <string name="info_independence_title">Aplicación independiente</string>
+    <string name="info_independence_body">EmotePack es una herramienta independiente y no está afiliada, respaldada ni patrocinada por 7TV ni por WhatsApp / Meta.</string>
+    <string name="info_license_title">Premisa de licencia (Fase 1)</string>
+    <string name="info_license_body">Esta primera fase opera bajo la premisa de licencia Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0), pendiente de revisión legal profesional antes de su posible publicación. Los emotes se obtienen directamente del catálogo público de 7TV sin consultas legales adicionales por emote.</string>
+    <string name="info_specs_title">Especificaciones de conversión</string>
+    <string name="info_specs_body">• 1 colección = 1 pack de WhatsApp (de 3 a 30 stickers; 1–2 se guardan localmente como borrador).\n• Estáticos: WebP 512×512, máx. 100 KB, fondo transparente, sin bordes blancos artificiales.\n• Animados: WebP animado 512×512, máx. 500 KB, máx. 10s, mín. 8 ms/fotograma, conserva transparencia.\n• Packs mixtos: Los emotes estáticos usan fake-vid WebP animado automáticamente para mantener todo en un solo pack.\n• Icono de bandeja: PNG 96×96, máx. 50 KB.</string>
+    <string name="privacy_policy_title">Política de privacidad</string>
+    <string name="privacy_policy_body">EmotePack procesa todas las conversiones de emotes y almacena todas las colecciones exclusivamente en tu dispositivo. No utiliza cuentas personales, rastreadores de analítica ni servidores propios. Las peticiones de red se realizan únicamente a la API pública y CDN de 7TV cuando buscas o descargas emotes, y el envío a WhatsApp ocurre de forma local mediante Intent y ContentProvider cuando tú lo inicias.</string>
+
+    <!-- Errors & Network -->
+    <string name="error_network">Error de red. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="error_conversion_timeout">La conversión superó el tiempo límite. Reintenta este emote.</string>
+    <string name="error_conversion_failed">No se pudo convertir el emote.</string>
+    <string name="error_api">Error de la API de 7TV (%1$s). Inténtalo de nuevo.</string>
+    <string name="error_retry">Reintentar</string>
+    <string name="ok">Aceptar</string>
+</resources>
