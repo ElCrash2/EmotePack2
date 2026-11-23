@@ -87,8 +87,11 @@
 
     <!-- Duration >10s Dialog -->
     <string name="trim_dialog_title">La animación supera los 10 segundos</string>
-    <string name="trim_dialog_message">El emote \"%1$s\" dura %2$.1f segundos y WhatsApp limita los stickers animados a 10.0 segundos. ¿Deseas recortarlo a 10 segundos para incluirlo?</string>
-    <string name="trim_one_button">Recortar a 10s</string>
+    <string name="trim_dialog_message">El emote \"%1$s\" dura %2$.1f segundos. Como WhatsApp comprueba sobre todo el límite de 500 KB, puedes bajar su calidad para conservar la duración, recortarlo a los primeros 10 segundos u omitirlo.</string>
+    <string name="trim_one_button">Recortar a 10s (primeros 10s)</string>
+    <string name="lower_quality_over10s_button">Bajar la calidad (mantener %1$.1fs)</string>
+    <string name="apply_all_over10s_checkbox">Aplicar a los %1$d emotes &gt;10s</string>
+    <string name="choose_over_10s_action">Opciones</string>
     <string name="trim_all_button">Recortar todos &gt;10s</string>
     <string name="skip_emote_button">Omitir emote</string>
 

@@ -11,6 +11,7 @@ import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.example.conversion.ConversionOutcome
 import com.example.conversion.DecodedFrame
+import com.example.conversion.Over10sHandling
 import com.example.conversion.StickerConversionMode
 import com.example.conversion.StickerConverter
 import com.example.conversion.WebPContainer
@@ -571,5 +572,82 @@ class EmotePackRobolectricTest {
         )
         assertTrue(corruptOutcome is ConversionOutcome.Failure)
     }
+
+    @Test
+    fun `over 10s lower quality preserves full duration under 500 KB and validates for pack`() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val frames = List(6) { idx ->
+            val bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.TRANSPARENT)
+                val canvas = Canvas(this)
+                val paint = Paint().apply { color = if (idx % 2 == 0) Color.MAGENTA else Color.CYAN }
+                canvas.drawCircle(32f, 32f, 24f, paint)
+            }
+            DecodedFrame(bitmap = bmp, durationMs = 2_400)
+        }
+        val longWebp = WebPContainer.encodeAnimatedWebP(frames, 64, 64, quality = 80)
+        frames.forEach { it.bitmap.recycle() }
+
+        val lowered = StickerConverter.convert(
+            inputBytes = longWebp,
+            mode = StickerConversionMode.ANIMATED,
+            over10sHandling = Over10sHandling.LOWER_QUALITY
+        )
+        assertTrue(lowered is ConversionOutcome.Success)
+        val success = lowered as ConversionOutcome.Success
+        assertTrue(success.preservedOver10s)
+        assertTrue(success.isAnimated)
+        assertEquals(512, success.inspection.width)
+        assertEquals(512, success.inspection.height)
+        assertTrue(success.inspection.totalDurationMs > 10_000)
+        assertTrue(success.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
+
+        val storage = LocalStorageManager(ctx)
+        val colId = "col_over10s"
+        val variantFile = storage.getSharedVariantFile("over10", "v1", ConversionModeType.ANIMATED_LOWER_QUALITY)
+        variantFile.writeBytes(success.webpBytes)
+
+        val items = (1..3).map { idx ->
+            StickerItemEntity(
+                id = "it_$idx",
+                collectionId = colId,
+                emoteId = "over10_$idx",
+                emoteName = "LongEmote$idx",
+                sourceSetId = null,
+                sourceSetName = null,
+                isAnimated = true,
+                previewUrl = "",
+                highResUrl = "",
+                fallbackUrlsCsv = "",
+                finalWebpPath = variantFile.absolutePath,
+                stickerFileName = LocalStorageManager.sanitizeStickerFileName("over10_$idx"),
+                fileSizeBytes = variantFile.length(),
+                width = success.inspection.width,
+                height = success.inspection.height,
+                frameCount = success.inspection.frameCount,
+                durationMs = success.inspection.totalDurationMs,
+                hasAlpha = success.inspection.hasAlpha,
+                status = ItemConversionStatus.COMPLETED,
+                errorMessage = null,
+                subpackId = colId,
+                sortOrder = idx - 1,
+                conversionMode = ConversionModeType.ANIMATED_LOWER_QUALITY
+            )
+        }
+
+        val buildResult = WhatsAppPackBuilder.buildSinglePack(
+            storage = storage,
+            collectionId = colId,
+            collectionName = "Long Pack",
+            completedItems = items,
+            existingPacks = emptyList()
+        )
+        assertNotNull(buildResult.pack)
+        assertTrue(buildResult.isAnimatedPack)
+        assertTrue(buildResult.pack!!.isWhatsAppReady)
+        val validation = WhatsAppPackExporter.validatePackReadyForWhatsApp(buildResult.pack, items)
+        assertTrue(validation is com.example.whatsapp.PackValidationResult.Valid)
+    }
 }
+
 

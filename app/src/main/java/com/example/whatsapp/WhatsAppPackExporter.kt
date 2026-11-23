@@ -87,7 +87,8 @@ object WhatsAppPackExporter {
         }
         for (item in completed) {
             val file = item.finalWebpPath?.let(::File)
-            if (file == null || StickerConverter.validateExistingWebp(file, pack.isAnimated) == null) {
+            val allowOver10s = item.conversionMode == com.example.data.local.ConversionModeType.ANIMATED_LOWER_QUALITY
+            if (file == null || StickerConverter.validateExistingWebp(file, pack.isAnimated, allowOver10s = allowOver10s) == null) {
                 return PackValidationResult.InvalidAssets(item.emoteName)
             }
         }

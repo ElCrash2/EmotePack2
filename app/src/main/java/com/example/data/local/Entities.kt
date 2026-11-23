@@ -29,6 +29,7 @@ object ItemConversionStatus {
 object ConversionModeType {
     const val STATIC = "STATIC"
     const val ANIMATED = "ANIMATED"
+    const val ANIMATED_LOWER_QUALITY = "ANIMATED_LOWER_QUALITY"
     const val FAKE_VID = "FAKE_VID"
 }
 

@@ -20,6 +20,12 @@ enum class StickerConversionMode {
     FAKE_VID
 }
 
+enum class Over10sHandling {
+    ASK_USER,
+    TRIM_10S,
+    LOWER_QUALITY
+}
+
 private enum class SniffedContainerFormat {
     GIF,
     WEBP,
@@ -58,7 +64,8 @@ sealed class ConversionOutcome {
         val webpBytes: ByteArray,
         val inspection: WebPInspectionResult,
         val isAnimated: Boolean,
-        val conversionMode: StickerConversionMode
+        val conversionMode: StickerConversionMode,
+        val preservedOver10s: Boolean = false
     ) : ConversionOutcome()
 
     data class NeedsTrimConfirmation(val totalDurationMs: Int) : ConversionOutcome()
@@ -74,6 +81,7 @@ object StickerConverter {
     const val MAX_TRAY_BYTES = 50_000 // Strictly <= 50 KB decimal & binary
     const val MAX_ANIMATION_DURATION_MS = 10_000
     const val MIN_FRAME_DURATION_MS = 8
+    private const val SMOOTH_FPS_FLOOR = 12
 
     private val defaultParams = ConverterParams()
 
@@ -84,13 +92,25 @@ object StickerConverter {
         shouldAbort: () -> Boolean = { false }
     ): ConversionOutcome {
         val mode = if (expectAnimated) StickerConversionMode.ANIMATED else StickerConversionMode.STATIC
-        return convert(inputBytes, mode, allowTrimOver10s, defaultParams, shouldAbort)
+        val over10s = if (allowTrimOver10s) Over10sHandling.TRIM_10S else Over10sHandling.ASK_USER
+        return convert(inputBytes, mode, over10s, defaultParams, shouldAbort)
     }
 
     fun convert(
         inputBytes: ByteArray,
         mode: StickerConversionMode,
         allowTrimOver10s: Boolean,
+        params: ConverterParams = defaultParams,
+        shouldAbort: () -> Boolean = { false }
+    ): ConversionOutcome {
+        val over10s = if (allowTrimOver10s) Over10sHandling.TRIM_10S else Over10sHandling.ASK_USER
+        return convert(inputBytes, mode, over10s, params, shouldAbort)
+    }
+
+    fun convert(
+        inputBytes: ByteArray,
+        mode: StickerConversionMode,
+        over10sHandling: Over10sHandling,
         params: ConverterParams = defaultParams,
         shouldAbort: () -> Boolean = { false }
     ): ConversionOutcome {
@@ -110,14 +130,14 @@ object StickerConverter {
                 }
                 StickerConversionMode.FAKE_VID -> {
                     if (decodedFrames.size > 1) {
-                        convertAnimated(decodedFrames, allowTrimOver10s, params, shouldAbort)
+                        convertAnimated(decodedFrames, over10sHandling, params, shouldAbort)
                     } else {
                         convertFakeVid(decodedFrames.first().bitmap, params, shouldAbort)
                     }
                 }
                 StickerConversionMode.ANIMATED -> {
                     if (decodedFrames.size > 1) {
-                        convertAnimated(decodedFrames, allowTrimOver10s, params, shouldAbort)
+                        convertAnimated(decodedFrames, over10sHandling, params, shouldAbort)
                     } else {
                         // Single-frame source inside an animated/mixed pack -> encode as motionless fake-vid
                         convertFakeVid(decodedFrames.first().bitmap, params, shouldAbort)
@@ -437,17 +457,14 @@ object StickerConverter {
     }
 
     /**
-     * Animated WebP optimization modeled on sticker-convert:
-     * 1) Normalize frame delays >= 8ms and trim >10s (prompting user when allowTrimOver10s = false)
-     * 2) Lossless consecutive duplicate frame merging & pre-cap FPS <= fpsMax (30fps)
-     * 3) Pass A: Binary search quality at full 512x512 resolution
-     * 4) Pass B: Power-curve FPS resampling at 512x512
-     * 5) Pass C: Alpha-preserving color quantization optimization
-     * 6) Pass D: Power-curve inner resolution adjustment inside 512x512 canvas
+     * Animated WebP optimization:
+     * 1) Normalize frame delays >= 8ms and handle >10s per [over10sHandling]
+     * 2) Preserve smooth FPS (>= 12fps) by lowering quality/quantization/inner-sharpness BEFORE dropping FPS
+     * 3) For LOWER_QUALITY (>10s kept intact), reduce inner resolution & quality first, then FPS if needed
      */
     private fun convertAnimated(
         rawFrames: List<DecodedFrame>,
-        allowTrimOver10s: Boolean,
+        over10sHandling: Over10sHandling,
         params: ConverterParams,
         shouldAbort: () -> Boolean
     ): ConversionOutcome {
@@ -459,16 +476,41 @@ object StickerConverter {
             frame.copy(durationMs = safeDur)
         }
 
-        val totalDuration = frames.sumOf { it.durationMs }
-        if (totalDuration > params.durationMaxMs) {
-            if (!allowTrimOver10s) {
-                return ConversionOutcome.NeedsTrimConfirmation(totalDuration)
+        val initialDuration = frames.sumOf { it.durationMs }
+        var keepOver10sDuration = false
+        if (initialDuration > params.durationMaxMs) {
+            when (over10sHandling) {
+                Over10sHandling.ASK_USER -> {
+                    return ConversionOutcome.NeedsTrimConfirmation(initialDuration)
+                }
+                Over10sHandling.TRIM_10S -> {
+                    frames = trimFramesToMaxDuration(frames, params.durationMaxMs)
+                }
+                Over10sHandling.LOWER_QUALITY -> {
+                    keepOver10sDuration = true
+                }
             }
-            frames = trimFramesToMaxDuration(frames, params.durationMaxMs)
         }
 
-        // Pre-cap excessive FPS / high-frame-count bursts before allocating 512x512 canvas frames
-        val cappedFrames = resampleFramesToSmartFpsCap(frames, params.fpsMax)
+        val maxDurationCapMs = if (keepOver10sDuration) null else params.durationMaxMs
+        val enforceMaxDuration = !keepOver10sDuration
+
+        // Pre-cap extreme frame bursts before allocating 512x512 canvas frames
+        val cappedFrames = resampleFramesToSmartFpsCap(
+            frames = frames,
+            fpsMax = params.fpsMax,
+            allowOver10s = keepOver10sDuration,
+            maxDurationMs = maxDurationCapMs
+        )
+
+        if (keepOver10sDuration) {
+            return convertAnimatedOver10sLowerQuality(
+                cappedFrames = cappedFrames,
+                maxBytes = maxBytes,
+                params = params,
+                shouldAbort = shouldAbort
+            )
+        }
 
         // Fit every frame to 512x512 transparent canvas
         val scaledFrames = cappedFrames.map {
@@ -478,8 +520,11 @@ object StickerConverter {
 
         try {
             val dedupedFrames = deduplicateIdenticalFrames(scaledFrames)
+            val sourceDuration = dedupedFrames.sumOf { it.durationMs }.coerceAtLeast(16)
+            val sourceFps = ((dedupedFrames.size * 1000f) / sourceDuration).roundToInt()
+                .coerceIn(params.fpsMin, params.fpsMax)
 
-            // Pass A: Full capped FPS at 512x512, interpolated quality binary search
+            // Pass A: Full capped FPS at 512x512
             val passAResult = searchAnimatedQuality(
                 frames = dedupedFrames,
                 minQ = params.qualityMin,
@@ -490,12 +535,12 @@ object StickerConverter {
                 shouldAbort = shouldAbort
             )
             passAResult.successBytes?.let { bytes ->
-                validateAnimated(bytes)?.let { check ->
+                validateAnimated(bytes, enforceMaxDuration)?.let { check ->
                     return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
                 }
             }
 
-            // Pass B: Feasibility-guided FPS reduction at full 512x512 resolution
+            // Pass B1: Keep smooth FPS (>= 12fps) at 512x512 first, then lower quality/quantization
             val minBytesPerFrame = if (passAResult.minQBytes > 0 && dedupedFrames.isNotEmpty()) {
                 passAResult.minQBytes.toFloat() / dedupedFrames.size.toFloat()
             } else 0f
@@ -503,21 +548,19 @@ object StickerConverter {
                 passAResult.maxQBytes.toFloat() / dedupedFrames.size.toFloat()
             } else Float.MAX_VALUE
 
-            val sourceDuration = dedupedFrames.sumOf { it.durationMs }.coerceAtLeast(16)
-            val sourceFps = ((dedupedFrames.size * 1000f) / sourceDuration).roundToInt()
-                .coerceIn(params.fpsMin, params.fpsMax)
-
+            var smoothFrames = dedupedFrames
+            val smoothFloor = minOf(sourceFps, SMOOTH_FPS_FLOOR)
             var lastTriedFrameCount = dedupedFrames.size
-            if (dedupedFrames.size > 3 && sourceFps > params.fpsMin) {
-                val fpsSteps = generatePowerCurveInts(sourceFps, params.fpsMin, params.fpsPower, steps = 4).drop(1)
-                for (targetFps in fpsSteps) {
+            if (dedupedFrames.size > 3 && sourceFps > smoothFloor) {
+                val smoothFpsSteps = generatePowerCurveInts(sourceFps, smoothFloor, params.fpsPower, steps = 3).drop(1)
+                for (targetFps in smoothFpsSteps) {
                     if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
-                    val resampled = resampleFramesByFps(dedupedFrames, targetFps)
+                    val resampled = resampleFramesByFps(dedupedFrames, targetFps, maxDurationCapMs)
                     if (resampled.size >= lastTriedFrameCount) continue
                     lastTriedFrameCount = resampled.size
+                    smoothFrames = resampled
 
-                    // Skip FPS steps that mathematically cannot fit even at minQ (always keep fpsMin as fallback)
-                    if (targetFps > params.fpsMin &&
+                    if (targetFps > smoothFloor &&
                         minBytesPerFrame > 0f &&
                         resampled.size * minBytesPerFrame > maxBytes * 1.12f
                     ) {
@@ -535,35 +578,52 @@ object StickerConverter {
                         shouldAbort = shouldAbort
                     )
                     passBResult.successBytes?.let { bytes ->
-                        validateAnimated(bytes)?.let { check ->
+                        validateAnimated(bytes, enforceMaxDuration)?.let { check ->
                             return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
                         }
                     }
                 }
             }
 
-            // Pass C: Alpha-safe color quantization at 512x512 with moderate FPS before dropping resolution
-            val midFrames = if (dedupedFrames.size > 10) {
-                resampleFramesByFps(dedupedFrames, maxOf(params.fpsMin, minOf(10, sourceFps)))
-            } else {
-                dedupedFrames
+            // Try lower WebP quality (6..14) + color quantization at smooth FPS before losing resolution
+            if (smoothFrames.size * minBytesPerFrame <= maxBytes * 1.6f) {
+                val lowQResult = searchAnimatedQuality(
+                    frames = smoothFrames,
+                    minQ = 6,
+                    maxQ = (params.qualityMin - 1).coerceAtLeast(6),
+                    steps = 3,
+                    maxBytes = maxBytes,
+                    probeMinFirst = true,
+                    shouldAbort = shouldAbort
+                )
+                lowQResult.successBytes?.let { bytes ->
+                    validateAnimated(bytes, enforceMaxDuration)?.let { check ->
+                        return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
+                    }
+                }
             }
-            val quantizedFrames = midFrames.map {
+
+            val quantizedBase = if (dedupedFrames.size > 60 && sourceFps > smoothFloor) {
+                resampleFramesByFps(dedupedFrames, smoothFloor, maxDurationCapMs)
+            } else {
+                smoothFrames
+            }
+            val quantizedFrames = quantizedBase.map {
                 if (shouldAbort()) throw InterruptedException("Aborted")
                 DecodedFrame(quantizeColorsAlphaSafe(it.bitmap, levelsPerChannel = 24), it.durationMs)
             }
             try {
-                val passCResult = searchAnimatedQuality(
+                val passQuantResult = searchAnimatedQuality(
                     frames = quantizedFrames,
-                    minQ = params.qualityMin,
+                    minQ = 8,
                     maxQ = params.qualityMax,
                     steps = 3,
                     maxBytes = maxBytes,
                     probeMinFirst = true,
                     shouldAbort = shouldAbort
                 )
-                passCResult.successBytes?.let { bytes ->
-                    validateAnimated(bytes)?.let { check ->
+                passQuantResult.successBytes?.let { bytes ->
+                    validateAnimated(bytes, enforceMaxDuration)?.let { check ->
                         return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
                     }
                 }
@@ -571,32 +631,61 @@ object StickerConverter {
                 quantizedFrames.forEach { it.bitmap.recycle() }
             }
 
-            // Pass D: Last resort inner resolution reduction inside 512x512 transparent canvas
-            val resSteps = listOf(384, params.resMin.coerceAtMost(320)).distinct()
-            for (innerRes in resSteps) {
-                if (innerRes >= params.resMax) continue
+            // Pass C: Lower inner sharpness/resolution inside 512x512 while preserving smooth FPS (>= 12fps)
+            val smoothCap = if (cappedFrames.size > 64) {
+                resampleFramesByFps(cappedFrames, maxOf(smoothFloor, minOf(sourceFps, 14)), maxDurationCapMs)
+            } else {
+                cappedFrames
+            }
+            val smoothInnerResSteps = listOf(416, 352, 288).filter { it < params.resMax }
+            for (innerRes in smoothInnerResSteps) {
                 if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
-                val innerBase = if (cappedFrames.size > 40) {
-                    resampleFramesByFps(cappedFrames, maxOf(params.fpsMin, 10))
-                } else {
-                    cappedFrames
+                val innerScaled = smoothCap.map {
+                    DecodedFrame(fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, innerRes), it.durationMs)
                 }
-                val innerScaled = innerBase.map {
+                try {
+                    val dedupInner = deduplicateIdenticalFrames(innerScaled)
+                    val passCResult = searchAnimatedQuality(
+                        frames = dedupInner,
+                        minQ = 8,
+                        maxQ = 90,
+                        steps = 4,
+                        maxBytes = maxBytes,
+                        probeMinFirst = innerRes >= 384,
+                        shouldAbort = shouldAbort
+                    )
+                    passCResult.successBytes?.let { bytes ->
+                        validateAnimated(bytes, enforceMaxDuration)?.let { check ->
+                            return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
+                        }
+                    }
+                } finally {
+                    innerScaled.forEach { it.bitmap.recycle() }
+                }
+            }
+
+            // Pass D: Last resort gradual FPS reduction paired with compact inner resolution
+            val fallbackFpsList = listOf(10, 8, params.fpsMin.coerceAtLeast(6)).distinct().filter { it < sourceFps || it <= 10 }
+            for (targetFps in fallbackFpsList) {
+                if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
+                val innerRes = if (targetFps <= 6) params.resMin.coerceAtMost(256) else 320
+                val fpsBase = resampleFramesByFps(cappedFrames, targetFps, maxDurationCapMs)
+                val innerScaled = fpsBase.map {
                     DecodedFrame(fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, innerRes), it.durationMs)
                 }
                 try {
                     val dedupInner = deduplicateIdenticalFrames(innerScaled)
                     val passDResult = searchAnimatedQuality(
                         frames = dedupInner,
-                        minQ = params.qualityMin,
-                        maxQ = params.qualityMax,
+                        minQ = 5,
+                        maxQ = 85,
                         steps = 3,
                         maxBytes = maxBytes,
                         probeMinFirst = false,
                         shouldAbort = shouldAbort
                     )
                     passDResult.successBytes?.let { bytes ->
-                        validateAnimated(bytes)?.let { check ->
+                        validateAnimated(bytes, enforceMaxDuration)?.let { check ->
                             return ConversionOutcome.Success(bytes, check, isAnimated = true, StickerConversionMode.ANIMATED)
                         }
                     }
@@ -609,6 +698,158 @@ object StickerConverter {
         } finally {
             scaledFrames.forEach { if (!it.bitmap.isRecycled) it.bitmap.recycle() }
         }
+    }
+
+    /**
+     * Converts >10s animations keeping their full duration under WhatsApp's 500 KB limit.
+     * Prioritizes reducing image sharpness (inner resolution + WebP quality + color quantization)
+     * before stepping down FPS.
+     */
+    private fun convertAnimatedOver10sLowerQuality(
+        cappedFrames: List<DecodedFrame>,
+        maxBytes: Int,
+        params: ConverterParams,
+        shouldAbort: () -> Boolean
+    ): ConversionOutcome {
+        val totalDuration = cappedFrames.sumOf { it.durationMs }.coerceAtLeast(16)
+        val baseFps = ((cappedFrames.size * 1000f) / totalDuration).roundToInt().coerceIn(4, params.fpsMax)
+
+        // 1. Try full 512px with reduced WebP quality first
+        val fullResFrames = cappedFrames.map {
+            if (shouldAbort()) throw InterruptedException("Aborted")
+            DecodedFrame(fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, params.resMax), it.durationMs)
+        }
+        try {
+            val dedupFull = deduplicateIdenticalFrames(fullResFrames)
+            val fullResPass = searchAnimatedQuality(
+                frames = dedupFull,
+                minQ = 5,
+                maxQ = 82,
+                steps = 4,
+                maxBytes = maxBytes,
+                probeMinFirst = true,
+                shouldAbort = shouldAbort
+            )
+            fullResPass.successBytes?.let { bytes ->
+                validateAnimated(bytes, enforceMaxDuration = false)?.let { check ->
+                    return ConversionOutcome.Success(
+                        webpBytes = bytes,
+                        inspection = check,
+                        isAnimated = true,
+                        conversionMode = StickerConversionMode.ANIMATED,
+                        preservedOver10s = true
+                    )
+                }
+            }
+        } finally {
+            fullResFrames.forEach { if (!it.bitmap.isRecycled) it.bitmap.recycle() }
+        }
+
+        // 2. Lower sharpness (inner resolution inside 512x512 canvas) while preserving FPS
+        val sharpnessSteps = listOf(384, 304, 240, 192)
+        for (innerRes in sharpnessSteps) {
+            if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
+            val innerScaled = cappedFrames.map {
+                DecodedFrame(fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, innerRes), it.durationMs)
+            }
+            try {
+                val dedupInner = deduplicateIdenticalFrames(innerScaled)
+                val resResult = searchAnimatedQuality(
+                    frames = dedupInner,
+                    minQ = 5,
+                    maxQ = 82,
+                    steps = 4,
+                    maxBytes = maxBytes,
+                    probeMinFirst = true,
+                    shouldAbort = shouldAbort
+                )
+                resResult.successBytes?.let { bytes ->
+                    validateAnimated(bytes, enforceMaxDuration = false)?.let { check ->
+                        return ConversionOutcome.Success(
+                            webpBytes = bytes,
+                            inspection = check,
+                            isAnimated = true,
+                            conversionMode = StickerConversionMode.ANIMATED,
+                            preservedOver10s = true
+                        )
+                    }
+                }
+            } finally {
+                innerScaled.forEach { it.bitmap.recycle() }
+            }
+        }
+
+        // 3. Quantize colors + reduced sharpness at preserved FPS
+        val quantized256 = cappedFrames.map {
+            if (shouldAbort()) throw InterruptedException("Aborted")
+            val scaled = fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, 240)
+            val quant = quantizeColorsAlphaSafe(scaled, levelsPerChannel = 16)
+            scaled.recycle()
+            DecodedFrame(quant, it.durationMs)
+        }
+        try {
+            val dedupQuant = deduplicateIdenticalFrames(quantized256)
+            val quantResult = searchAnimatedQuality(
+                frames = dedupQuant,
+                minQ = 5,
+                maxQ = 72,
+                steps = 3,
+                maxBytes = maxBytes,
+                probeMinFirst = true,
+                shouldAbort = shouldAbort
+            )
+            quantResult.successBytes?.let { bytes ->
+                validateAnimated(bytes, enforceMaxDuration = false)?.let { check ->
+                    return ConversionOutcome.Success(
+                        webpBytes = bytes,
+                        inspection = check,
+                        isAnimated = true,
+                        conversionMode = StickerConversionMode.ANIMATED,
+                        preservedOver10s = true
+                    )
+                }
+            }
+        } finally {
+            quantized256.forEach { it.bitmap.recycle() }
+        }
+
+        // 4. Last resort: gently step down FPS + sharpness so very long animations still fit <= 500 KB
+        val fallbackPairs = listOf(10 to 240, 8 to 208, 6 to 192, 4 to 160)
+        for ((targetFps, innerRes) in fallbackPairs) {
+            if (targetFps >= baseFps && cappedFrames.size <= 90) continue
+            if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
+            val resampled = resampleFramesByFps(cappedFrames, targetFps, maxDurationMs = null)
+            val innerScaled = resampled.map {
+                DecodedFrame(fitToSquareCanvas(it.bitmap, STICKER_SIZE_PX, innerRes), it.durationMs)
+            }
+            try {
+                val dedupInner = deduplicateIdenticalFrames(innerScaled)
+                val fallbackResult = searchAnimatedQuality(
+                    frames = dedupInner,
+                    minQ = 4,
+                    maxQ = 68,
+                    steps = 3,
+                    maxBytes = maxBytes,
+                    probeMinFirst = true,
+                    shouldAbort = shouldAbort
+                )
+                fallbackResult.successBytes?.let { bytes ->
+                    validateAnimated(bytes, enforceMaxDuration = false)?.let { check ->
+                        return ConversionOutcome.Success(
+                            webpBytes = bytes,
+                            inspection = check,
+                            isAnimated = true,
+                            conversionMode = StickerConversionMode.ANIMATED,
+                            preservedOver10s = true
+                        )
+                    }
+                }
+            } finally {
+                innerScaled.forEach { it.bitmap.recycle() }
+            }
+        }
+
+        return ConversionOutcome.Failure("Animation too large to fit under 500 KB even at reduced quality")
     }
 
     private class QualitySearchResult(
@@ -687,20 +928,27 @@ object StickerConverter {
         return QualitySearchResult(bestBytes, lowBytesOut, highBytesOut)
     }
 
-    private fun resampleFramesToSmartFpsCap(frames: List<DecodedFrame>, fpsMax: Int): List<DecodedFrame> {
+    private fun resampleFramesToSmartFpsCap(
+        frames: List<DecodedFrame>,
+        fpsMax: Int,
+        allowOver10s: Boolean,
+        maxDurationMs: Int?
+    ): List<DecodedFrame> {
         if (frames.size <= 2) return frames
         val totalDuration = frames.sumOf { it.durationMs }.coerceAtLeast(16)
         val rawFps = (frames.size * 1000f) / totalDuration
-        // Cap burst animations (>48 frames) to <=20fps (or <=15fps for >80 frames) so mobile CPU
-        // finishes rapidly while preserving smooth motion under 500 KB.
+
+        val frameBudget = if (allowOver10s) 115 else 96
+        val fpsFloor = if (allowOver10s) 8 else SMOOTH_FPS_FLOOR
         val smartMaxFps = when {
-            frames.size > 80 -> minOf(fpsMax, 15)
-            frames.size > 48 -> minOf(fpsMax, 20)
+            frames.size > 140 -> minOf(fpsMax, 16)
+            frames.size > 72 -> minOf(fpsMax, 20)
             else -> fpsMax
         }
-        if (rawFps <= smartMaxFps + 1f && frames.size <= 72) return frames
-        val targetFps = minOf(smartMaxFps, maxOf(8, (72_000f / totalDuration).roundToInt()))
-        return resampleFramesByFps(frames, targetFps)
+        if (rawFps <= smartMaxFps + 1f && frames.size <= frameBudget) return frames
+        val budgetFps = ((frameBudget * 1000f) / totalDuration).roundToInt().coerceAtLeast(fpsFloor)
+        val targetFps = minOf(smartMaxFps, budgetFps)
+        return resampleFramesByFps(frames, targetFps, maxDurationMs)
     }
 
     /**
@@ -803,7 +1051,11 @@ object StickerConverter {
         return if (result.size >= 2) result else frames.take(2)
     }
 
-    private fun resampleFramesByFps(frames: List<DecodedFrame>, targetFps: Int): List<DecodedFrame> {
+    private fun resampleFramesByFps(
+        frames: List<DecodedFrame>,
+        targetFps: Int,
+        maxDurationMs: Int? = MAX_ANIMATION_DURATION_MS
+    ): List<DecodedFrame> {
         if (frames.size <= 2) return frames
         val totalDuration = frames.sumOf { it.durationMs }.coerceAtLeast(16)
         val targetFrameDur = maxOf(MIN_FRAME_DURATION_MS, (1000f / targetFps).roundToInt())
@@ -836,8 +1088,8 @@ object StickerConverter {
             }
         }
         val clampedTotal = out.sumOf { it.durationMs }
-        return if (clampedTotal > MAX_ANIMATION_DURATION_MS) {
-            trimFramesToMaxDuration(out, MAX_ANIMATION_DURATION_MS)
+        return if (maxDurationMs != null && clampedTotal > maxDurationMs) {
+            trimFramesToMaxDuration(out, maxDurationMs)
         } else if (out.size >= 2) {
             out
         } else {
@@ -908,10 +1160,14 @@ object StickerConverter {
         return false
     }
 
-    fun validateExistingWebp(file: File, expectAnimated: Boolean): WebPInspectionResult? {
+    fun validateExistingWebp(
+        file: File,
+        expectAnimated: Boolean,
+        allowOver10s: Boolean = false
+    ): WebPInspectionResult? {
         if (!file.exists()) return null
         val bytes = file.readBytes()
-        return if (expectAnimated) validateAnimated(bytes) else validateStatic(bytes)
+        return if (expectAnimated) validateAnimated(bytes, enforceMaxDuration = !allowOver10s) else validateStatic(bytes)
     }
 
     private fun validateStatic(bytes: ByteArray): WebPInspectionResult? {
@@ -923,7 +1179,10 @@ object StickerConverter {
         return info
     }
 
-    private fun validateAnimated(bytes: ByteArray): WebPInspectionResult? {
+    private fun validateAnimated(
+        bytes: ByteArray,
+        enforceMaxDuration: Boolean = true
+    ): WebPInspectionResult? {
         val info = WebPContainer.inspect(bytes)
         if (!info.isValidWebP) return null
         if (!info.isAnimated) return null
@@ -931,7 +1190,7 @@ object StickerConverter {
         if (info.fileSizeBytes > MAX_ANIMATED_BYTES) return null
         if (info.frameCount < 2) return null
         if (info.minFrameDurationMs < MIN_FRAME_DURATION_MS) return null
-        if (info.totalDurationMs > MAX_ANIMATION_DURATION_MS) return null
+        if (enforceMaxDuration && info.totalDurationMs > MAX_ANIMATION_DURATION_MS) return null
         if (info.loopCount != 0) return null
         return info
     }

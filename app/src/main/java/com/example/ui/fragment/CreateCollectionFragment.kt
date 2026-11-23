@@ -11,12 +11,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.appcompat.app.AlertDialog
 import com.example.AppConfig
 import com.example.AppNavigator
 import com.example.R
 import com.example.data.local.CollectionStatus
 import com.example.data.local.ItemConversionStatus
 import com.example.data.local.StickerItemEntity
+import com.example.databinding.DialogOver10sOptionsBinding
 import com.example.databinding.FragmentCreateCollectionBinding
 import com.example.ui.adapter.ConversionStatusAdapter
 import com.example.ui.adapter.SelectedPreviewAdapter
@@ -36,6 +38,7 @@ class CreateCollectionFragment : Fragment() {
     private lateinit var previewAdapter: SelectedPreviewAdapter
     private lateinit var statusAdapter: ConversionStatusAdapter
     private var promptedTrimItemIds = mutableSetOf<String>()
+    private var activeOver10sDialog: AlertDialog? = null
     private var hasAutoNavigatedToSummary = false
 
     private val suggestedName: String by lazy { requireArguments().getString(ARG_SUGGESTED_NAME).orEmpty() }
@@ -234,7 +237,7 @@ class CreateCollectionFragment : Fragment() {
 
                     // Prompt user explicitly if any animation exceeds 10 seconds
                     val firstNeedsTrim = needsTrim.firstOrNull { it.id !in promptedTrimItemIds }
-                    if (firstNeedsTrim != null && !isRunning) {
+                    if (firstNeedsTrim != null && !isRunning && activeOver10sDialog?.isShowing != true) {
                         promptedTrimItemIds.add(firstNeedsTrim.id)
                         showTrimConfirmationDialog(firstNeedsTrim)
                     }
@@ -259,23 +262,57 @@ class CreateCollectionFragment : Fragment() {
     }
 
     private fun showTrimConfirmationDialog(item: StickerItemEntity) {
+        activeOver10sDialog?.dismiss()
         val secs = item.durationMs / 1000f
-        MaterialAlertDialogBuilder(requireContext())
+        val remainingNeedsTrim = viewModel.activeCollectionDetails.value?.items
+            ?.count { it.status == ItemConversionStatus.NEEDS_TRIM } ?: 1
+
+        val dialogBinding = DialogOver10sOptionsBinding.inflate(layoutInflater)
+        dialogBinding.tvOver10sMessage.text = getString(R.string.trim_dialog_message, item.emoteName, secs)
+        dialogBinding.btnOver10sLowerQuality.text = getString(R.string.lower_quality_over10s_button, secs)
+        dialogBinding.btnOver10sTrim.setText(R.string.trim_one_button)
+        dialogBinding.btnOver10sSkip.setText(R.string.skip_emote_button)
+
+        if (remainingNeedsTrim > 1) {
+            dialogBinding.cbApplyAllOver10s.visibility = View.VISIBLE
+            dialogBinding.cbApplyAllOver10s.isChecked = false
+            dialogBinding.cbApplyAllOver10s.text = getString(R.string.apply_all_over10s_checkbox, remainingNeedsTrim)
+        } else {
+            dialogBinding.cbApplyAllOver10s.visibility = View.GONE
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.trim_dialog_title)
-            .setMessage(getString(R.string.trim_dialog_message, item.emoteName, secs))
-            .setPositiveButton(R.string.trim_one_button) { _, _ ->
-                viewModel.trimAndRetryItem(item.id)
+            .setView(dialogBinding.root)
+            .create()
+
+        dialogBinding.btnOver10sLowerQuality.setOnClickListener {
+            val applyAll = dialogBinding.cbApplyAllOver10s.isChecked
+            dialog.dismiss()
+            viewModel.lowerQualityOver10s(item.id, applyAll)
+        }
+        dialogBinding.btnOver10sTrim.setOnClickListener {
+            val applyAll = dialogBinding.cbApplyAllOver10s.isChecked
+            dialog.dismiss()
+            viewModel.trimOver10s(item.id, applyAll)
+        }
+        dialogBinding.btnOver10sSkip.setOnClickListener {
+            val applyAll = dialogBinding.cbApplyAllOver10s.isChecked
+            dialog.dismiss()
+            viewModel.skipOver10s(item.id, applyAll)
+        }
+        dialog.setOnDismissListener {
+            if (activeOver10sDialog === dialog) {
+                activeOver10sDialog = null
             }
-            .setNeutralButton(R.string.trim_all_button) { _, _ ->
-                viewModel.trimAllOver10s()
-            }
-            .setNegativeButton(R.string.skip_emote_button) { _, _ ->
-                viewModel.skipTrimItem(item.id)
-            }
-            .show()
+        }
+        activeOver10sDialog = dialog
+        dialog.show()
     }
 
     override fun onDestroyView() {
+        activeOver10sDialog?.dismiss()
+        activeOver10sDialog = null
         super.onDestroyView()
         _binding = null
     }

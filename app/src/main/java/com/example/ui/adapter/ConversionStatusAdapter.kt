@@ -72,7 +72,7 @@ class ConversionStatusAdapter(
                     binding.tvConvStatus.text = ctx.getString(R.string.status_needs_trim, secs)
                     binding.tvConvStatus.setTextColor(ContextCompat.getColor(ctx, R.color.status_warning))
                     binding.btnConvAction.visibility = View.VISIBLE
-                    binding.btnConvAction.setText(R.string.trim_one_button)
+                    binding.btnConvAction.setText(R.string.choose_over_10s_action)
                     binding.btnConvAction.setOnClickListener { onTrimRequested(item) }
                 }
                 ItemConversionStatus.CANCELLED -> {

@@ -84,41 +84,43 @@ class CreateCollectionViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    fun trimAndRetryItem(itemId: String) {
+    fun trimOver10s(itemId: String, applyToAll: Boolean) {
         val id = _activeCollectionId.value ?: return
         viewModelScope.launch {
-            enqueueWorker(id, trimAll = false, trimItemIds = listOf(itemId))
-        }
-    }
-
-    fun trimAllOver10s() {
-        val id = _activeCollectionId.value ?: return
-        viewModelScope.launch {
-            enqueueWorker(id, trimAll = true, trimItemIds = emptyList())
-        }
-    }
-
-    fun skipTrimItem(itemId: String) {
-        val details = activeCollectionDetails.value ?: return
-        val item = details.items.firstOrNull { it.id == itemId } ?: return
-        viewModelScope.launch {
-            repo.updateItem(
-                item.copy(
-                    status = ItemConversionStatus.FAILED,
-                    errorMessage = "Skipped (>10s)"
-                )
+            repo.markOver10sRetrying(id, itemId, applyToAll)
+            enqueueWorker(
+                collectionId = id,
+                trimAll = applyToAll,
+                trimItemIds = if (applyToAll) emptyList() else listOf(itemId),
+                lowerQualityAll = false,
+                lowerQualityItemIds = emptyList()
             )
-            val updated = repo.getCollectionWithDetails(details.collection.id)
-            val anyStillPending = updated?.items?.any {
-                it.status == ItemConversionStatus.PENDING ||
-                    it.status == ItemConversionStatus.DOWNLOADING ||
-                    it.status == ItemConversionStatus.CONVERTING ||
-                    it.status == ItemConversionStatus.VALIDATING ||
-                    it.status == ItemConversionStatus.NEEDS_TRIM
-            } ?: false
-            if (!anyStillPending) {
-                repo.finalizeCollectionBuild(details.collection.id, cancelled = false)
-            }
+        }
+    }
+
+    fun lowerQualityOver10s(itemId: String, applyToAll: Boolean) {
+        val id = _activeCollectionId.value ?: return
+        viewModelScope.launch {
+            repo.markOver10sRetrying(id, itemId, applyToAll)
+            enqueueWorker(
+                collectionId = id,
+                trimAll = false,
+                trimItemIds = emptyList(),
+                lowerQualityAll = applyToAll,
+                lowerQualityItemIds = if (applyToAll) emptyList() else listOf(itemId)
+            )
+        }
+    }
+
+    fun skipOver10s(itemId: String, applyToAll: Boolean) {
+        val id = _activeCollectionId.value ?: return
+        viewModelScope.launch {
+            repo.skipOver10sItems(
+                collectionId = id,
+                itemId = itemId,
+                applyToAll = applyToAll,
+                reason = "Skipped (>10s)"
+            )
         }
     }
 
@@ -142,11 +144,19 @@ class CreateCollectionViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    private fun enqueueWorker(collectionId: String, trimAll: Boolean, trimItemIds: List<String>) {
+    private fun enqueueWorker(
+        collectionId: String,
+        trimAll: Boolean,
+        trimItemIds: List<String>,
+        lowerQualityAll: Boolean = false,
+        lowerQualityItemIds: List<String> = emptyList()
+    ) {
         val input = Data.Builder()
             .putString(PackBuildWorker.KEY_COLLECTION_ID, collectionId)
             .putBoolean(PackBuildWorker.KEY_TRIM_ALL_OVER_10S, trimAll)
             .putStringArray(PackBuildWorker.KEY_TRIM_ITEM_IDS, trimItemIds.toTypedArray())
+            .putBoolean(PackBuildWorker.KEY_LOWER_QUALITY_ALL_OVER_10S, lowerQualityAll)
+            .putStringArray(PackBuildWorker.KEY_LOWER_QUALITY_ITEM_IDS, lowerQualityItemIds.toTypedArray())
             .build()
 
         val request = OneTimeWorkRequestBuilder<PackBuildWorker>()

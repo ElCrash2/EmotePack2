@@ -111,11 +111,18 @@ class CollectionRepository(
             val cacheKey = "${emote.id}_$effectiveVersionKey"
             val prev = existingItemsByEmoteId[emote.id]
 
+            val preserveLowerQuality = prev?.conversionMode == ConversionModeType.ANIMATED_LOWER_QUALITY &&
+                targetMode == ConversionModeType.ANIMATED
+            val expectedPrevMode = if (preserveLowerQuality) ConversionModeType.ANIMATED_LOWER_QUALITY else targetMode
+
             // 1. Check global shared cache for exact emote + version + target mode + converter version
             val cacheEntry = emoteCacheDao.getByCacheKey(cacheKey)
                 ?: if (effectiveUpdatedAt == 0L) emoteCacheDao.getLatestForEmote(emote.id) else null
 
-            val cachedVariantPath = if (cacheEntry != null && cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION) {
+            val cachedVariantPath = if (!preserveLowerQuality &&
+                cacheEntry != null &&
+                cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION
+            ) {
                 when (targetMode) {
                     ConversionModeType.STATIC -> cacheEntry.staticWebpPath
                     ConversionModeType.ANIMATED -> cacheEntry.animatedWebpPath
@@ -170,11 +177,15 @@ class CollectionRepository(
                     sameVersion &&
                     fakeVidVersionOk &&
                     prev.status == ItemConversionStatus.COMPLETED &&
-                    prev.conversionMode == targetMode &&
+                    prev.conversionMode == expectedPrevMode &&
                     prevFile != null &&
                     prevFile.exists()
                 ) {
-                    StickerConverter.validateExistingWebp(prevFile, expectAnimatedFile)
+                    StickerConverter.validateExistingWebp(
+                        prevFile,
+                        expectAnimatedFile,
+                        allowOver10s = preserveLowerQuality
+                    )
                 } else null
 
                 if (prev != null && prevValidInfo != null) {
@@ -272,6 +283,59 @@ class CollectionRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+    }
+
+    suspend fun markOver10sRetrying(
+        collectionId: String,
+        itemId: String,
+        applyToAll: Boolean
+    ) = withContext(Dispatchers.IO) {
+        val details = collectionDao.getCollectionWithDetails(collectionId) ?: return@withContext
+        val updated = details.items.map { item ->
+            val target = item.status == ItemConversionStatus.NEEDS_TRIM &&
+                (applyToAll || item.id == itemId)
+            if (target) {
+                item.copy(status = ItemConversionStatus.PENDING, errorMessage = null)
+            } else {
+                item
+            }
+        }
+        itemDao.insertAll(updated)
+        collectionDao.upsert(
+            details.collection.copy(
+                status = CollectionStatus.PROCESSING,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun skipOver10sItems(
+        collectionId: String,
+        itemId: String,
+        applyToAll: Boolean,
+        reason: String
+    ) = withContext(Dispatchers.IO) {
+        val details = collectionDao.getCollectionWithDetails(collectionId) ?: return@withContext
+        val updated = details.items.map { item ->
+            val target = item.status == ItemConversionStatus.NEEDS_TRIM &&
+                (applyToAll || item.id == itemId)
+            if (target) {
+                item.copy(status = ItemConversionStatus.FAILED, errorMessage = reason)
+            } else {
+                item
+            }
+        }
+        itemDao.insertAll(updated)
+        val anyStillPending = updated.any {
+            it.status == ItemConversionStatus.PENDING ||
+                it.status == ItemConversionStatus.DOWNLOADING ||
+                it.status == ItemConversionStatus.CONVERTING ||
+                it.status == ItemConversionStatus.VALIDATING ||
+                it.status == ItemConversionStatus.NEEDS_TRIM
+        }
+        if (!anyStillPending) {
+            finalizeCollectionBuild(collectionId, cancelled = false)
+        }
     }
 
     suspend fun finalizeCollectionBuild(collectionId: String, cancelled: Boolean) = withContext(Dispatchers.IO) {

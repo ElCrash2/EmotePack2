@@ -87,8 +87,11 @@
 
     <!-- Duration >10s Dialog -->
     <string name="trim_dialog_title">Animation Exceeds 10 Seconds</string>
-    <string name="trim_dialog_message">The emote \"%1$s\" lasts %2$.1f seconds, while WhatsApp animated stickers are limited to 10.0 seconds. Do you want to trim it to 10 seconds to include it?</string>
-    <string name="trim_one_button">Trim to 10s</string>
+    <string name="trim_dialog_message">The emote \"%1$s\" lasts %2$.1f seconds. WhatsApp mainly enforces the 500 KB file size limit, so you can keep its full duration by lowering quality, trim it to the first 10 seconds, or skip it.</string>
+    <string name="trim_one_button">Trim to first 10s</string>
+    <string name="lower_quality_over10s_button">Lower quality (keep %1$.1fs)</string>
+    <string name="apply_all_over10s_checkbox">Apply to all %1$d emotes &gt;10s</string>
+    <string name="choose_over_10s_action">Options</string>
     <string name="trim_all_button">Trim all &gt;10s</string>
     <string name="skip_emote_button">Skip emote</string>
 

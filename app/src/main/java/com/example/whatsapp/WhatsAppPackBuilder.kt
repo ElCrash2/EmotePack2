@@ -75,13 +75,15 @@ object WhatsAppPackBuilder {
         val isAnimatedPack = candidateItems.any {
             it.isAnimated ||
                 it.conversionMode == ConversionModeType.ANIMATED ||
+                it.conversionMode == ConversionModeType.ANIMATED_LOWER_QUALITY ||
                 it.conversionMode == ConversionModeType.FAKE_VID
         }
 
         // Verify every sticker on disk matches the pack's format (static vs animated)
         val validItems = candidateItems.filter { item ->
             val file = item.finalWebpPath?.let(::File) ?: return@filter false
-            StickerConverter.validateExistingWebp(file, isAnimatedPack) != null
+            val allowOver10s = item.conversionMode == ConversionModeType.ANIMATED_LOWER_QUALITY
+            StickerConverter.validateExistingWebp(file, isAnimatedPack, allowOver10s = allowOver10s) != null
         }
 
         val itemsForPack = if (validItems.isNotEmpty()) validItems else candidateItems
