@@ -31,9 +31,78 @@ object GifFrameDecoder {
         return header == "GIF87a" || header == "GIF89a"
     }
 
+    fun inspectDurationMs(
+        bytes: ByteArray,
+        shouldAbort: () -> Boolean = { false }
+    ): Int? {
+        val reader = ByteReader(bytes)
+        if (bytes.size < 13) return null
+        val sig = reader.readAscii(6)
+        if (sig != "GIF87a" && sig != "GIF89a") return null
+        val screenWidth = reader.readUInt16LE()
+        val screenHeight = reader.readUInt16LE()
+        if (screenWidth <= 0 || screenHeight <= 0 || screenWidth > 4096 || screenHeight > 4096) return null
+
+        val packed = reader.readByte()
+        val gctFlag = (packed and 0x80) != 0
+        val gctSize = 1 shl ((packed and 0x07) + 1)
+        reader.readByte()
+        reader.readByte()
+        if (gctFlag) reader.skip(gctSize * 3)
+
+        var delayMs = 100
+        var totalDuration = 0
+        var frameCount = 0
+        var blockSteps = 0
+        val maxBlockSteps = maxOf(2048, bytes.size)
+
+        while (reader.hasRemaining() && blockSteps++ < maxBlockSteps) {
+            if (shouldAbort()) return null
+            when (reader.readByte()) {
+                0x3B -> break
+                0x21 -> {
+                    if (!reader.hasRemaining()) break
+                    val label = reader.readByte()
+                    if (label == 0xF9) {
+                        val blockSize = reader.readByte()
+                        if (blockSize >= 4 && reader.hasRemaining(4)) {
+                            reader.readByte()
+                            val delayCs = reader.readUInt16LE()
+                            delayMs = if (delayCs <= 1) 100 else delayCs * 10
+                            reader.readByte()
+                            if (blockSize > 4) reader.skip(blockSize - 4)
+                        } else if (blockSize > 0) {
+                            reader.skip(blockSize)
+                        }
+                    }
+                    skipSubBlocks(reader, shouldAbort)
+                }
+                0x2C -> {
+                    if (!reader.hasRemaining(9)) break
+                    reader.skip(8)
+                    val imgPacked = reader.readByte()
+                    val lctFlag = (imgPacked and 0x80) != 0
+                    val lctSize = 1 shl ((imgPacked and 0x07) + 1)
+                    if (lctFlag) reader.skip(lctSize * 3)
+                    if (!reader.hasRemaining()) break
+                    reader.readByte() // lzwMinCodeSize
+                    skipSubBlocks(reader, shouldAbort)
+                    totalDuration += delayMs
+                    frameCount++
+                    delayMs = 100
+                    if (frameCount >= MAX_GIF_FRAMES * 2) break
+                }
+                0x00 -> Unit
+                else -> if (!reader.hasRemaining()) break
+            }
+        }
+        return if (frameCount >= 2) totalDuration else null
+    }
+
     fun decode(
         bytes: ByteArray,
         maxDimension: Int = MAX_DECODED_DIMENSION,
+        stopAfterMs: Int? = null,
         shouldAbort: () -> Boolean = { false }
     ): List<DecodedFrame> {
         val reader = ByteReader(bytes)
@@ -67,6 +136,7 @@ object GifFrameDecoder {
             xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
         }
         val frames = mutableListOf<DecodedFrame>()
+        var decodedDurationMs = 0
         val destPixels = IntArray(screenWidth * screenHeight)
 
         var blockSteps = 0
@@ -154,8 +224,11 @@ object GifFrameDecoder {
                             canvasBitmap.setPixels(destPixels, 0, screenWidth, 0, 0, screenWidth, screenHeight)
                             val snapshot = createBoundedSnapshot(canvasBitmap, maxDimension)
                             frames.add(DecodedFrame(snapshot, delayMs))
+                            decodedDurationMs += delayMs
 
-                            if (frames.size >= MAX_GIF_FRAMES) {
+                            if (frames.size >= MAX_GIF_FRAMES ||
+                                (stopAfterMs != null && decodedDurationMs >= stopAfterMs && frames.size >= 2)
+                            ) {
                                 break
                             }
 

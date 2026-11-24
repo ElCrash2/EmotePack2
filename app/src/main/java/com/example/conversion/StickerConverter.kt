@@ -118,12 +118,25 @@ object StickerConverter {
         if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
 
         val format = sniffContainerFormat(inputBytes)
-        val decodedFrames = decodeInputFrames(inputBytes, format, shouldAbort)
+        if (mode != StickerConversionMode.STATIC && over10sHandling == Over10sHandling.ASK_USER) {
+            val fastDurationMs = inspectAnimatedDurationFast(inputBytes, format, shouldAbort)
+            if (fastDurationMs != null && fastDurationMs > params.durationMaxMs) {
+                return ConversionOutcome.NeedsTrimConfirmation(fastDurationMs)
+            }
+        }
+
+        val stopDecodeAfterMs = if (mode != StickerConversionMode.STATIC && over10sHandling == Over10sHandling.TRIM_10S) {
+            params.durationMaxMs
+        } else {
+            null
+        }
+        val decodedFrames = decodeInputFrames(inputBytes, format, stopDecodeAfterMs, shouldAbort)
         if (decodedFrames.isEmpty()) {
             return ConversionOutcome.Failure("Unsupported or corrupt image format ($format)")
         }
 
         return try {
+            if (shouldAbort()) return ConversionOutcome.Failure("Cancelled")
             when (mode) {
                 StickerConversionMode.STATIC -> {
                     convertStatic(decodedFrames.first().bitmap, params, shouldAbort)
@@ -202,18 +215,34 @@ object StickerConverter {
         return false
     }
 
+    private fun inspectAnimatedDurationFast(
+        bytes: ByteArray,
+        format: SniffedContainerFormat,
+        shouldAbort: () -> Boolean
+    ): Int? {
+        return when (format) {
+            SniffedContainerFormat.WEBP -> {
+                val info = WebPContainer.inspect(bytes)
+                if (info.isValidWebP && info.isAnimated && info.frameCount >= 2) info.totalDurationMs else null
+            }
+            SniffedContainerFormat.GIF -> GifFrameDecoder.inspectDurationMs(bytes, shouldAbort)
+            else -> null
+        }
+    }
+
     private fun decodeInputFrames(
         bytes: ByteArray,
         format: SniffedContainerFormat,
+        stopAfterMs: Int?,
         shouldAbort: () -> Boolean
     ): List<DecodedFrame> {
         when (format) {
             SniffedContainerFormat.GIF -> {
-                val frames = GifFrameDecoder.decode(bytes, STICKER_SIZE_PX, shouldAbort)
+                val frames = GifFrameDecoder.decode(bytes, STICKER_SIZE_PX, stopAfterMs, shouldAbort)
                 if (frames.isNotEmpty()) return frames
             }
             SniffedContainerFormat.WEBP -> {
-                val frames = WebPContainer.decodeAnimatedFrames(bytes, STICKER_SIZE_PX, shouldAbort)
+                val frames = WebPContainer.decodeAnimatedFrames(bytes, STICKER_SIZE_PX, stopAfterMs, shouldAbort)
                 if (frames.isNotEmpty()) return frames
             }
             SniffedContainerFormat.APNG, SniffedContainerFormat.AVIF_HEIF -> {
@@ -858,7 +887,144 @@ object StickerConverter {
         val maxQBytes: Int
     )
 
+    private fun estimateAnimatedWebPSize(
+        frames: List<DecodedFrame>,
+        quality: Int,
+        shouldAbort: () -> Boolean
+    ): Int {
+        if (frames.size <= 12) {
+            return WebPContainer.encodeAnimatedWebP(
+                frames = frames,
+                width = STICKER_SIZE_PX,
+                height = STICKER_SIZE_PX,
+                quality = quality,
+                shouldAbort = shouldAbort
+            ).size
+        }
+        val sampleCount = 8
+        val sampleFrames = (0 until sampleCount).map { i ->
+            val idx = (((i + 0.5f) * frames.size) / sampleCount).toInt().coerceIn(0, frames.lastIndex)
+            frames[idx]
+        }
+        val sampleBytes = WebPContainer.encodeAnimatedWebP(
+            frames = sampleFrames,
+            width = STICKER_SIZE_PX,
+            height = STICKER_SIZE_PX,
+            quality = quality,
+            shouldAbort = shouldAbort
+        )
+        val payloadOnly = (sampleBytes.size - 38).coerceAtLeast(sampleCount * 64)
+        val bytesPerFrame = payloadOnly.toDouble() / sampleCount.toDouble()
+        return (38.0 + bytesPerFrame * frames.size).roundToInt()
+    }
+
     private fun searchAnimatedQuality(
+        frames: List<DecodedFrame>,
+        minQ: Int,
+        maxQ: Int,
+        steps: Int,
+        maxBytes: Int,
+        probeMinFirst: Boolean,
+        shouldAbort: () -> Boolean
+    ): QualitySearchResult {
+        if (shouldAbort()) return QualitySearchResult(null, 0, 0)
+
+        // Small frame counts encode quickly directly without sampling overhead
+        if (frames.size <= 16) {
+            return searchAnimatedQualityExact(frames, minQ, maxQ, steps, maxBytes, probeMinFirst, shouldAbort)
+        }
+
+        var estLowBytes = 0
+        var estHighBytes = 0
+        val sampleTargetMax = (maxBytes * 0.93f).toInt()
+
+        if (probeMinFirst) {
+            estLowBytes = estimateAnimatedWebPSize(frames, minQ, shouldAbort)
+            if (estLowBytes > maxBytes * 1.18f) {
+                return QualitySearchResult(null, estLowBytes, 0)
+            }
+            if (shouldAbort()) return QualitySearchResult(null, estLowBytes, 0)
+            estHighBytes = estimateAnimatedWebPSize(frames, maxQ, shouldAbort)
+        } else {
+            estHighBytes = estimateAnimatedWebPSize(frames, maxQ, shouldAbort)
+            if (estHighBytes <= maxBytes * 0.92f) {
+                val fullMax = WebPContainer.encodeAnimatedWebP(frames, STICKER_SIZE_PX, STICKER_SIZE_PX, maxQ, shouldAbort = shouldAbort)
+                if (fullMax.size <= maxBytes) {
+                    return QualitySearchResult(fullMax, 0, fullMax.size)
+                }
+            }
+            if (shouldAbort()) return QualitySearchResult(null, 0, estHighBytes)
+            estLowBytes = estimateAnimatedWebPSize(frames, minQ, shouldAbort)
+            if (estLowBytes > maxBytes * 1.18f) {
+                return QualitySearchResult(null, estLowBytes, estHighBytes)
+            }
+        }
+
+        // Fast binary search on the 8-frame sample (10x faster than full-frame search)
+        var bestSampleQ = minQ
+        if (estHighBytes <= sampleTargetMax) {
+            bestSampleQ = maxQ
+        } else {
+            var low = minQ + 1
+            var high = maxQ - 1
+            var remainingSteps = maxOf(2, steps)
+            var firstProbe = true
+            while (low <= high && remainingSteps > 0 && !shouldAbort()) {
+                val mid = if (firstProbe && estHighBytes > estLowBytes) {
+                    firstProbe = false
+                    val ratio = (sampleTargetMax - estLowBytes).toFloat() / (estHighBytes - estLowBytes).toFloat()
+                    (minQ + ((maxQ - minQ) * ratio * 0.92f).roundToInt()).coerceIn(low, high)
+                } else {
+                    (low + high) ushr 1
+                }
+                val estMid = estimateAnimatedWebPSize(frames, mid, shouldAbort)
+                if (estMid <= sampleTargetMax) {
+                    bestSampleQ = mid
+                    low = mid + 1
+                } else {
+                    high = mid - 1
+                }
+                remainingSteps--
+            }
+        }
+
+        if (shouldAbort()) return QualitySearchResult(null, estLowBytes, estHighBytes)
+
+        // Single final full-frame encode at best estimated quality (+ at most 1-2 exact adjustments)
+        val firstFull = WebPContainer.encodeAnimatedWebP(frames, STICKER_SIZE_PX, STICKER_SIZE_PX, bestSampleQ, shouldAbort = shouldAbort)
+        if (firstFull.size <= maxBytes) {
+            var bestFull = firstFull
+            if (bestSampleQ + 6 <= maxQ && firstFull.size < maxBytes * 0.80f && !shouldAbort()) {
+                val boostQ = minOf(maxQ, (bestSampleQ + maxQ + 1) ushr 1)
+                val boosted = WebPContainer.encodeAnimatedWebP(frames, STICKER_SIZE_PX, STICKER_SIZE_PX, boostQ, shouldAbort = shouldAbort)
+                if (boosted.size <= maxBytes) {
+                    bestFull = boosted
+                }
+            }
+            return QualitySearchResult(bestFull, estLowBytes, maxOf(estHighBytes, bestFull.size))
+        }
+
+        if (bestSampleQ > minQ && !shouldAbort()) {
+            val ratio = maxBytes.toFloat() / firstFull.size.toFloat()
+            val adjQ = (bestSampleQ * ratio * 0.88f).roundToInt().coerceIn(minQ, bestSampleQ - 1)
+            val adjFull = WebPContainer.encodeAnimatedWebP(frames, STICKER_SIZE_PX, STICKER_SIZE_PX, adjQ, shouldAbort = shouldAbort)
+            if (adjFull.size <= maxBytes) {
+                return QualitySearchResult(adjFull, estLowBytes, firstFull.size)
+            }
+            if (adjQ > minQ && !shouldAbort()) {
+                val minFull = WebPContainer.encodeAnimatedWebP(frames, STICKER_SIZE_PX, STICKER_SIZE_PX, minQ, shouldAbort = shouldAbort)
+                if (minFull.size <= maxBytes) {
+                    return QualitySearchResult(minFull, minFull.size, firstFull.size)
+                }
+                return QualitySearchResult(null, minFull.size, firstFull.size)
+            }
+            return QualitySearchResult(null, adjFull.size, firstFull.size)
+        }
+
+        return QualitySearchResult(null, firstFull.size, maxOf(estHighBytes, firstFull.size))
+    }
+
+    private fun searchAnimatedQualityExact(
         frames: List<DecodedFrame>,
         minQ: Int,
         maxQ: Int,
@@ -938,9 +1104,10 @@ object StickerConverter {
         val totalDuration = frames.sumOf { it.durationMs }.coerceAtLeast(16)
         val rawFps = (frames.size * 1000f) / totalDuration
 
-        val frameBudget = if (allowOver10s) 115 else 96
-        val fpsFloor = if (allowOver10s) 8 else SMOOTH_FPS_FLOOR
+        val frameBudget = if (allowOver10s) 100 else 90
+        val fpsFloor = if (allowOver10s) 6 else SMOOTH_FPS_FLOOR
         val smartMaxFps = when {
+            allowOver10s -> minOf(fpsMax, 15)
             frames.size > 140 -> minOf(fpsMax, 16)
             frames.size > 72 -> minOf(fpsMax, 20)
             else -> fpsMax

@@ -55,9 +55,9 @@ class PackBuildWorker(
         const val CHANNEL_ID = "emotepack_downloads"
         const val NOTIFICATION_ID = 4102
         private const val DOWNLOAD_TIMEOUT_MS = 20_000L
-        private const val CONVERSION_TIMEOUT_MS = 60_000L
+        private const val CONVERSION_TIMEOUT_MS = 90_000L
         private const val MAX_CONCURRENT_ITEMS = 3
-        private const val MAX_CONCURRENT_ANIMATIONS = 2
+        private const val MAX_CONCURRENT_ANIMATIONS = 1
     }
 
     override suspend fun doWork(): Result {
@@ -353,6 +353,19 @@ class PackBuildWorker(
                         )
                     }
                     is ConversionOutcome.NeedsTrimConfirmation -> {
+                        if (originalFile != null) {
+                            updateSharedCacheEntry(
+                                repo = repo,
+                                existing = cacheEntry,
+                                cacheKey = cacheKey,
+                                item = item,
+                                versionKey = effectiveVersionKey,
+                                originalFile = originalFile,
+                                mode = targetMode,
+                                variantFile = originalFile,
+                                preservedOver10s = true
+                            )
+                        }
                         repo.updateItem(
                             item.copy(
                                 durationMs = outcome.totalDurationMs,

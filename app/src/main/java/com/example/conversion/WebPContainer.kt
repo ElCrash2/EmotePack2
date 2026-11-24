@@ -196,6 +196,7 @@ object WebPContainer {
     fun decodeAnimatedFrames(
         bytes: ByteArray,
         maxDimension: Int = MAX_DECODED_DIMENSION,
+        stopAfterMs: Int? = null,
         shouldAbort: () -> Boolean = { false }
     ): List<DecodedFrame> {
         val inspection = inspect(bytes)
@@ -219,6 +220,7 @@ object WebPContainer {
         val blendPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
         val decoded = mutableListOf<DecodedFrame>()
+        var decodedDurationMs = 0
         var offset = 12
         var chunkGuard = 0
 
@@ -266,8 +268,11 @@ object WebPContainer {
                                 durationMs = durationMs
                             )
                         )
+                        decodedDurationMs += durationMs
 
-                        if (decoded.size >= MAX_FRAMES) break
+                        if (decoded.size >= MAX_FRAMES ||
+                            (stopAfterMs != null && decodedDurationMs >= stopAfterMs && decoded.size >= 2)
+                        ) break
 
                         if (disposeBg) {
                             canvas.drawRect(

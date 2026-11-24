@@ -648,6 +648,53 @@ class EmotePackRobolectricTest {
         val validation = WhatsAppPackExporter.validatePackReadyForWhatsApp(buildResult.pack, items)
         assertTrue(validation is com.example.whatsapp.PackValidationResult.Valid)
     }
+
+    @Test
+    fun `high frame count over 10s uses fast sampled search cleanly for both trim and lower quality`() {
+        val frames = List(40) { idx ->
+            val bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.TRANSPARENT)
+                val canvas = Canvas(this)
+                val paint = Paint().apply {
+                    color = Color.rgb((idx * 6) % 255, 180, (255 - idx * 5) % 255)
+                }
+                canvas.drawCircle(16f + (idx % 32), 32f, 18f, paint)
+            }
+            DecodedFrame(bitmap = bmp, durationMs = 300) // 12,000 ms total
+        }
+        val longWebp = WebPContainer.encodeAnimatedWebP(frames, 64, 64, quality = 80)
+        frames.forEach { it.bitmap.recycle() }
+
+        val askResult = StickerConverter.convert(
+            inputBytes = longWebp,
+            mode = StickerConversionMode.ANIMATED,
+            over10sHandling = Over10sHandling.ASK_USER
+        )
+        assertTrue(askResult is ConversionOutcome.NeedsTrimConfirmation)
+        assertEquals(12_000, (askResult as ConversionOutcome.NeedsTrimConfirmation).totalDurationMs)
+
+        val trimResult = StickerConverter.convert(
+            inputBytes = longWebp,
+            mode = StickerConversionMode.ANIMATED,
+            over10sHandling = Over10sHandling.TRIM_10S
+        )
+        assertTrue(trimResult is ConversionOutcome.Success)
+        val trimSuccess = trimResult as ConversionOutcome.Success
+        assertTrue(trimSuccess.inspection.totalDurationMs <= 10_000)
+        assertTrue(trimSuccess.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
+
+        val lowQResult = StickerConverter.convert(
+            inputBytes = longWebp,
+            mode = StickerConversionMode.ANIMATED,
+            over10sHandling = Over10sHandling.LOWER_QUALITY
+        )
+        assertTrue(lowQResult is ConversionOutcome.Success)
+        val lowQSuccess = lowQResult as ConversionOutcome.Success
+        assertTrue(lowQSuccess.preservedOver10s)
+        assertTrue(lowQSuccess.inspection.totalDurationMs > 10_000)
+        assertTrue(lowQSuccess.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
+    }
 }
+
 
 
