@@ -64,6 +64,12 @@ class SettingsFragment : Fragment() {
             val selected = when (checkedId) {
                 R.id.rb_lang_es -> AppLanguage.SPANISH
                 R.id.rb_lang_en -> AppLanguage.ENGLISH
+                R.id.rb_lang_pt -> AppLanguage.PORTUGUESE
+                R.id.rb_lang_ru -> AppLanguage.RUSSIAN
+                R.id.rb_lang_fr -> AppLanguage.FRENCH
+                R.id.rb_lang_de -> AppLanguage.GERMAN
+                R.id.rb_lang_hi -> AppLanguage.HINDI
+                R.id.rb_lang_id -> AppLanguage.INDONESIAN
                 else -> AppLanguage.SYSTEM
             }
             viewModel.setLanguage(selected)
@@ -109,6 +115,12 @@ class SettingsFragment : Fragment() {
                             AppLanguage.SYSTEM -> R.id.rb_lang_system
                             AppLanguage.SPANISH -> R.id.rb_lang_es
                             AppLanguage.ENGLISH -> R.id.rb_lang_en
+                            AppLanguage.PORTUGUESE -> R.id.rb_lang_pt
+                            AppLanguage.RUSSIAN -> R.id.rb_lang_ru
+                            AppLanguage.FRENCH -> R.id.rb_lang_fr
+                            AppLanguage.GERMAN -> R.id.rb_lang_de
+                            AppLanguage.HINDI -> R.id.rb_lang_hi
+                            AppLanguage.INDONESIAN -> R.id.rb_lang_id
                         }
                         binding.rgLanguage.check(checkedId)
                         suppressRadio = false
@@ -117,6 +129,12 @@ class SettingsFragment : Fragment() {
                             AppLanguage.SYSTEM -> getString(R.string.lang_system)
                             AppLanguage.SPANISH -> getString(R.string.lang_es)
                             AppLanguage.ENGLISH -> getString(R.string.lang_en)
+                            AppLanguage.PORTUGUESE -> getString(R.string.lang_pt)
+                            AppLanguage.RUSSIAN -> getString(R.string.lang_ru)
+                            AppLanguage.FRENCH -> getString(R.string.lang_fr)
+                            AppLanguage.GERMAN -> getString(R.string.lang_de)
+                            AppLanguage.HINDI -> getString(R.string.lang_hi)
+                            AppLanguage.INDONESIAN -> getString(R.string.lang_id)
                         }
                         binding.tvCurrentLanguage.text = getString(R.string.settings_language_current, label)
                     }

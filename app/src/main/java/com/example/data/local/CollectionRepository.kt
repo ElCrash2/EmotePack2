@@ -116,10 +116,14 @@ class CollectionRepository(
             val expectedPrevMode = if (preserveLowerQuality) ConversionModeType.ANIMATED_LOWER_QUALITY else targetMode
 
             // 1. Check global shared cache for exact emote + version + target mode + converter version
+            // (skip animated reuse if original file exceeds 10s so new packs always prompt user choice)
             val cacheEntry = emoteCacheDao.getByCacheKey(cacheKey)
                 ?: if (effectiveUpdatedAt == 0L) emoteCacheDao.getLatestForEmote(emote.id) else null
+            val cachedOriginalOver10s = targetMode == ConversionModeType.ANIMATED &&
+                StickerConverter.isOriginalFileOver10s(cacheEntry?.originalFilePath?.let(::File))
 
             val cachedVariantPath = if (!preserveLowerQuality &&
+                !cachedOriginalOver10s &&
                 cacheEntry != null &&
                 cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION
             ) {
@@ -133,7 +137,7 @@ class CollectionRepository(
 
             val cachedVariantFile = cachedVariantPath?.let(::File)
             val cachedInfo = if (cachedVariantFile != null && cachedVariantFile.exists()) {
-                StickerConverter.validateExistingWebp(cachedVariantFile, expectAnimatedFile)
+                StickerConverter.validateExistingWebp(cachedVariantFile, expectAnimatedFile, allowOver10s = false)
             } else null
 
             if (cachedInfo != null && cachedVariantFile != null && cacheEntry != null) {
@@ -184,7 +188,7 @@ class CollectionRepository(
                     StickerConverter.validateExistingWebp(
                         prevFile,
                         expectAnimatedFile,
-                        allowOver10s = preserveLowerQuality
+                        allowOver10s = false
                     )
                 } else null
 

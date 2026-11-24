@@ -54,10 +54,10 @@
                         android:textColor="@color/text_primary" />
 
                     <com.google.android.material.radiobutton.MaterialRadioButton
-                        android:id="@+id/rb_lang_es"
+                        android:id="@+id/rb_lang_de"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="@string/lang_es"
+                        android:text="@string/lang_de"
                         android:textColor="@color/text_primary" />
 
                     <com.google.android.material.radiobutton.MaterialRadioButton
@@ -65,6 +65,48 @@
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:text="@string/lang_en"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_es"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_es"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_fr"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_fr"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_id"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_id"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_pt"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_pt"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_ru"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_ru"
+                        android:textColor="@color/text_primary" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/rb_lang_hi"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/lang_hi"
                         android:textColor="@color/text_primary" />
                 </RadioGroup>
             </LinearLayout>

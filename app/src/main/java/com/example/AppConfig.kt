@@ -9,7 +9,7 @@ import android.content.Context
 object AppConfig {
     const val MAX_STICKERS_PER_COLLECTION = 30
     const val MIN_STICKERS_FOR_WHATSAPP = 3
-    const val CONVERTER_VERSION = 4
+    const val CONVERTER_VERSION = 5
 
     fun getPackAuthor(context: Context): String = context.getString(R.string.app_name)
 }

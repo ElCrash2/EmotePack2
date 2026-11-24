@@ -18,11 +18,19 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 enum class AppLanguage(val code: String) {
     SYSTEM("system"),
     SPANISH("es"),
-    ENGLISH("en");
+    ENGLISH("en"),
+    PORTUGUESE("pt"),
+    RUSSIAN("ru"),
+    FRENCH("fr"),
+    GERMAN("de"),
+    HINDI("hi"),
+    INDONESIAN("in");
 
     companion object {
-        fun fromCode(code: String?): AppLanguage =
-            entries.firstOrNull { it.code == code } ?: SYSTEM
+        fun fromCode(code: String?): AppLanguage = when (code) {
+            "id" -> INDONESIAN
+            else -> entries.firstOrNull { it.code == code } ?: SYSTEM
+        }
     }
 }
 
@@ -45,19 +53,18 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun applySavedLanguageOnStartup() {
         val saved = languageFlow.first()
-        applyLanguage(saved)
+        if (saved != AppLanguage.SYSTEM) {
+            applyLanguage(saved)
+        }
     }
 
     fun applyLanguage(language: AppLanguage) {
         val locales = when (language) {
-            AppLanguage.SYSTEM -> {
-                val systemLang = Locale.getDefault().language
-                val resolved = if (systemLang == "es") "es" else "en"
-                LocaleListCompat.forLanguageTags(resolved)
-            }
-            AppLanguage.SPANISH -> LocaleListCompat.forLanguageTags("es")
-            AppLanguage.ENGLISH -> LocaleListCompat.forLanguageTags("en")
+            AppLanguage.SYSTEM -> LocaleListCompat.getEmptyLocaleList()
+            else -> LocaleListCompat.forLanguageTags(language.code)
         }
-        AppCompatDelegate.setApplicationLocales(locales)
+        if (AppCompatDelegate.getApplicationLocales() != locales) {
+            AppCompatDelegate.setApplicationLocales(locales)
+        }
     }
 }

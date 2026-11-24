@@ -87,9 +87,9 @@
 
     <!-- Duration >10s Dialog -->
     <string name="trim_dialog_title">La animación supera los 10 segundos</string>
-    <string name="trim_dialog_message">El emote \"%1$s\" dura %2$.1f segundos. Como WhatsApp comprueba sobre todo el límite de 500 KB, puedes bajar su calidad para conservar la duración, recortarlo a los primeros 10 segundos u omitirlo.</string>
+    <string name="trim_dialog_message">El emote \"%1$s\" dura %2$.1f segundos (WhatsApp exige máx. 10s y 500 KB). Puedes ajustarlo completo a 10s bajando su calidad y FPS, recortarlo a los primeros 10 segundos u omitirlo.</string>
     <string name="trim_one_button">Recortar a 10s (primeros 10s)</string>
-    <string name="lower_quality_over10s_button">Bajar la calidad (mantener %1$.1fs)</string>
+    <string name="lower_quality_over10s_button">Bajar calidad y FPS (ajustar %1$.1fs a 10s)</string>
     <string name="apply_all_over10s_checkbox">Aplicar a los %1$d emotes &gt;10s</string>
     <string name="choose_over_10s_action">Opciones</string>
     <string name="trim_all_button">Recortar todos &gt;10s</string>
@@ -161,9 +161,15 @@
     <string name="settings_title">Ajustes</string>
     <string name="settings_language_section">Idioma</string>
     <string name="settings_language_current">Idioma actual: %1$s</string>
-    <string name="lang_system">Automático del sistema (ES / EN)</string>
+    <string name="lang_system">Automático del sistema</string>
     <string name="lang_es">Español</string>
     <string name="lang_en">English</string>
+    <string name="lang_pt">Português</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_hi">हिन्दी</string>
+    <string name="lang_id">Bahasa Indonesia</string>
 
     <string name="settings_storage_section">Almacenamiento local y caché</string>
     <string name="settings_storage_collections">Packs guardados y variantes: %1$s</string>

@@ -353,37 +353,128 @@ object WebPContainer {
         shouldAbort: () -> Boolean = { false }
     ): ByteArray {
         val anmfChunks = ArrayList<ByteArray>(frames.size)
-        val cachedByBitmap = java.util.IdentityHashMap<Bitmap, Pair<ByteArray, Boolean>>(frames.size)
+        val cachedByBitmap = java.util.IdentityHashMap<Bitmap, EncodedFramePayload>(frames.size)
         var anyAlpha = false
         for (frame in frames) {
             if (shouldAbort()) throw InterruptedException("Aborted")
             val cached = cachedByBitmap[frame.bitmap]
-            val (payloadChunks, frameHasAlpha) = if (cached != null) {
+            val encoded = if (cached != null) {
                 cached
             } else {
-                val staticBytes = encodeStaticWebP(frame.bitmap, quality, lossless)
-                val chunks = extractImageBitstreamChunks(staticBytes)
-                if (chunks.isEmpty()) {
-                    throw IllegalStateException("Empty WebP frame bitstream")
-                }
-                val alpha = containsAlphaPayload(chunks)
-                (chunks to alpha).also { cachedByBitmap[frame.bitmap] = it }
+                encodeSingleAnmfPayload(frame.bitmap, width, height, quality, lossless)
+                    .also { cachedByBitmap[frame.bitmap] = it }
             }
-            if (frameHasAlpha) {
+            if (encoded.hasCanvasAlpha) {
                 anyAlpha = true
             }
             val duration = maxOf(8, frame.durationMs)
             val anmf = buildAnmfChunk(
-                width = width,
-                height = height,
+                x = encoded.x,
+                y = encoded.y,
+                width = encoded.w,
+                height = encoded.h,
                 durationMs = duration,
                 anmfFlags = ANMF_FLAG_DISPOSE_BG or ANMF_FLAG_NO_BLEND,
-                payloadChunks = payloadChunks
+                payloadChunks = encoded.payloadChunks
             )
             anmfChunks.add(anmf)
         }
 
         return assembleAnimatedRiff(width, height, anyAlpha, anmfChunks)
+    }
+
+    private data class EncodedFramePayload(
+        val x: Int,
+        val y: Int,
+        val w: Int,
+        val h: Int,
+        val hasCanvasAlpha: Boolean,
+        val payloadChunks: ByteArray
+    )
+
+    private fun encodeSingleAnmfPayload(
+        bitmap: Bitmap,
+        canvasW: Int,
+        canvasH: Int,
+        quality: Int,
+        lossless: Boolean
+    ): EncodedFramePayload {
+        val bw = bitmap.width
+        val bh = bitmap.height
+        if (bw != canvasW || bh != canvasH || !bitmap.hasAlpha()) {
+            val staticBytes = encodeStaticWebP(bitmap, quality, lossless)
+            val chunks = extractImageBitstreamChunks(staticBytes)
+            if (chunks.isEmpty()) throw IllegalStateException("Empty WebP frame bitstream")
+            val alpha = containsAlphaPayload(chunks) || bw < canvasW || bh < canvasH
+            return EncodedFramePayload(0, 0, bw, bh, alpha, chunks)
+        }
+
+        val pixels = IntArray(bw * bh)
+        bitmap.getPixels(pixels, 0, bw, 0, 0, bw, bh)
+        var minX = bw
+        var minY = bh
+        var maxX = -1
+        var maxY = -1
+        var allOpaque = true
+        for (py in 0 until bh) {
+            val rowOff = py * bw
+            for (px in 0 until bw) {
+                val a = pixels[rowOff + px] ushr 24
+                if (a < 255) allOpaque = false
+                if (a > 0) {
+                    if (px < minX) minX = px
+                    if (px > maxX) maxX = px
+                    if (py < minY) minY = py
+                    if (py > maxY) maxY = py
+                }
+            }
+        }
+
+        if (allOpaque) {
+            val copy = bitmap.copy(Bitmap.Config.ARGB_8888, true).apply { setHasAlpha(false) }
+            try {
+                val staticBytes = encodeStaticWebP(copy, quality, lossless)
+                val chunks = extractImageBitstreamChunks(staticBytes)
+                if (chunks.isEmpty()) throw IllegalStateException("Empty WebP frame bitstream")
+                return EncodedFramePayload(0, 0, bw, bh, false, chunks)
+            } finally {
+                copy.recycle()
+            }
+        }
+
+        if (maxX < 0 || maxY < 0) {
+            val tiny = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.TRANSPARENT) }
+            try {
+                val staticBytes = encodeStaticWebP(tiny, quality, lossless)
+                val chunks = extractImageBitstreamChunks(staticBytes)
+                if (chunks.isEmpty()) throw IllegalStateException("Empty WebP frame bitstream")
+                return EncodedFramePayload(0, 0, 2, 2, true, chunks)
+            } finally {
+                tiny.recycle()
+            }
+        }
+
+        val cropX = minX and 1.inv()
+        val cropY = minY and 1.inv()
+        val cropW = (maxX - cropX + 1).coerceIn(2, bw - cropX)
+        val cropH = (maxY - cropY + 1).coerceIn(2, bh - cropY)
+
+        if (cropX == 0 && cropY == 0 && cropW == bw && cropH == bh) {
+            val staticBytes = encodeStaticWebP(bitmap, quality, lossless)
+            val chunks = extractImageBitstreamChunks(staticBytes)
+            if (chunks.isEmpty()) throw IllegalStateException("Empty WebP frame bitstream")
+            return EncodedFramePayload(0, 0, bw, bh, containsAlphaPayload(chunks), chunks)
+        }
+
+        val cropped = Bitmap.createBitmap(bitmap, cropX, cropY, cropW, cropH)
+        return try {
+            val staticBytes = encodeStaticWebP(cropped, quality, lossless)
+            val chunks = extractImageBitstreamChunks(staticBytes)
+            if (chunks.isEmpty()) throw IllegalStateException("Empty WebP frame bitstream")
+            EncodedFramePayload(cropX, cropY, cropW, cropH, true, chunks)
+        } finally {
+            cropped.recycle()
+        }
     }
 
     /**
@@ -412,6 +503,8 @@ object WebPContainer {
 
         val anmfChunks = ArrayList<ByteArray>(count)
         val sharedAnmf = buildAnmfChunk(
+            x = 0,
+            y = 0,
             width = width,
             height = height,
             durationMs = duration,
@@ -576,6 +669,8 @@ object WebPContainer {
     }
 
     private fun buildAnmfChunk(
+        x: Int = 0,
+        y: Int = 0,
         width: Int,
         height: Int,
         durationMs: Int,
@@ -586,8 +681,8 @@ object WebPContainer {
         val out = ByteArrayOutputStream(8 + chunkPayloadSize + 1)
         out.write("ANMF".toByteArray(Charsets.US_ASCII))
         writeUInt32LE(out, chunkPayloadSize)
-        writeUInt24LE(out, 0) // Frame X / 2 = 0
-        writeUInt24LE(out, 0) // Frame Y / 2 = 0
+        writeUInt24LE(out, x / 2)
+        writeUInt24LE(out, y / 2)
         writeUInt24LE(out, width - 1)
         writeUInt24LE(out, height - 1)
         writeUInt24LE(out, durationMs)

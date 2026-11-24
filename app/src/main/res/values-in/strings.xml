@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EmotePack</string>
+    <string name="app_tagline">Emote 7TV ke stiker WhatsApp</string>
+
+    <!-- Navigation & Drawer -->
+    <string name="nav_menu_open">Buka menu navigasi</string>
+    <string name="nav_back">Kembali</string>
+    <string name="nav_home">Beranda</string>
+    <string name="nav_my_packs">Paket Stiker Saya</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_app_info">Informasi Aplikasi</string>
+
+    <!-- Home Screen & Dual Search -->
+    <string name="home_hero_title">Buat Paket Stiker WhatsApp</string>
+    <string name="home_hero_subtitle">Cari streamer 7TV atau emote satuan, pilih hingga 30 favorit, lalu ekspor bersama menjadi satu paket stiker WhatsApp.</string>
+    <string name="search_streamer_label">Cari streamer</string>
+    <string name="search_streamer_hint">Nama kanal atau kreator (mis. xQc, Rubius)</string>
+    <string name="search_emote_label">Cari emote</string>
+    <string name="search_emote_hint">Nama emote (mis. peepoHappy, chiqiuto)</string>
+    <string name="search_button">Cari</string>
+    <string name="search_empty_validation">Ketik nama streamer atau emote sebelum mencari.</string>
+    <string name="search_active_mode_streamer">Pencarian aktif: Streamer</string>
+    <string name="search_active_mode_emote">Pencarian aktif: Emote</string>
+    <string name="search_results_streamers_title">Hasil streamer</string>
+    <string name="search_no_streamers_found">Tidak ada streamer yang cocok untuk \"%1$s\".</string>
+    <string name="search_loading_streamers">Mencari pengguna 7TV…</string>
+    <string name="search_load_more">Muat lebih banyak</string>
+    <string name="streamer_username_handle">@%1$s</string>
+    <string name="streamer_sets_count">%1$d set emote</string>
+
+    <!-- Streamer Emotes & Emote Search Grids -->
+    <string name="streamer_emotes_title">%1$s</string>
+    <string name="emote_search_title">Emote: %1$s</string>
+    <string name="filter_all_sets">Semua set (%1$d)</string>
+    <string name="select_first_30">Pilih 30 pertama</string>
+    <string name="selected_count_format">%1$d / 30 dipilih</string>
+    <string name="max_30_stickers_reached">Batas tercapai: satu paket WhatsApp maksimal berisi 30 stiker.</string>
+    <string name="create_pack_action">Buat paket</string>
+    <string name="save_edits_action">Simpan perubahan</string>
+    <string name="badge_animated">ANIM</string>
+    <string name="badge_static">GAMBAR</string>
+    <string name="no_emotes_found">Emote tidak ditemukan.</string>
+    <string name="loading_emotes">Memuat emote…</string>
+    <string name="loading_emote_set">Memuat set emote…</string>
+    <string name="select_at_least_one">Pilih minimal satu emote untuk membuat paket.</string>
+    <string name="editing_banner">Mengedit \"%1$s\" — %2$d / 30 dipilih</string>
+    <string name="new_search_prompt">Cari emote lain</string>
+
+    <!-- Create / Review Collection Screen -->
+    <string name="create_collection_title">Paket Stiker Baru</string>
+    <string name="edit_collection_title">Edit Paket Stiker</string>
+    <string name="collection_name_label">Nama koleksi</string>
+    <string name="collection_name_hint">Masukkan nama untuk paket stiker Anda</string>
+    <string name="collection_name_required">Harap masukkan nama koleksi.</string>
+    <string name="summary_total">Total: %1$d</string>
+    <string name="summary_animated">Animasi: %1$d</string>
+    <string name="summary_static">Statis: %1$d</string>
+    <string name="whatsapp_split_preview_title">Format Satu Paket WhatsApp</string>
+    <string name="pack_format_static">Paket WebP statis (512×512, ≤100 KB per stiker).</string>
+    <string name="pack_format_animated">Paket WebP animasi (512×512, ≤500 KB per stiker).</string>
+    <string name="pack_format_mixed_fake_vid">Pilihan campuran: gambar statis akan dikonversi dengan fake-vid menjadi WebP animasi diam agar semua %1$d stiker diekspor bersama sebagai 1 paket WhatsApp.</string>
+    <string name="whatsapp_draft_warning">Catatan: Anda dapat menyimpan draf lokal dengan 1–2 stiker, namun mengirim ke WhatsApp membutuhkan minimal 3 stiker.</string>
+    <string name="confirm_create_pack">Unduh &amp; Konversi</string>
+    <string name="confirm_update_pack">Simpan &amp; Buat Ulang</string>
+    <string name="remove_emote_cd">Hapus %1$s</string>
+    <string name="insufficient_storage_error">Ruang penyimpanan bebas tidak cukup (butuh minimal %1$d MB).</string>
+
+    <!-- Download & Conversion Progress -->
+    <string name="build_progress_title">Memproses Paket Stiker</string>
+    <string name="progress_counts_format">%1$d selesai • %2$d menunggu • %3$d gagal</string>
+    <string name="status_pending">Menunggu</string>
+    <string name="status_downloading">Mengunduh asli…</string>
+    <string name="status_converting">Mengonversi ke WebP…</string>
+    <string name="status_validating">Memeriksa batas…</string>
+    <string name="status_completed">Siap (%1$d KB)</string>
+    <string name="status_failed">Gagal: %1$s</string>
+    <string name="status_needs_trim">Melebihi 10d (%1$.1fd)</string>
+    <string name="status_cancelled">Dibatalkan</string>
+    <string name="retry_failed">Coba lagi yang gagal</string>
+    <string name="cancel_operation">Batalkan pembuatan</string>
+    <string name="view_created_pack">Buka Ringkasan</string>
+    <string name="notification_channel_name">Unduhan Paket Stiker</string>
+    <string name="notification_channel_desc">Menampilkan progres saat mengunduh dan mengonversi emote 7TV</string>
+    <string name="notification_progress_title">Membuat \"%1$s\"</string>
+    <string name="notification_progress_body">%1$d dari %2$d emote diproses</string>
+
+    <!-- Duration >10s Dialog -->
+    <string name="trim_dialog_title">Animasi Melebihi 10 Detik</string>
+    <string name="trim_dialog_message">Emote \"%1$s\" berdurasi %2$.1f detik (batas WhatsApp: maks. 10d &amp; 500 KB). Anda dapat menyesuaikan seluruh animasi ke dalam 10d dengan menurunkan kualitas &amp; FPS, memotong 10 detik pertama, atau melewatinya.</string>
+    <string name="trim_one_button">Potong ke 10d pertama</string>
+    <string name="lower_quality_over10s_button">Turunkan kualitas &amp; FPS (%1$.1fd ke 10d)</string>
+    <string name="apply_all_over10s_checkbox">Terapkan ke semua %1$d emote &gt;10d</string>
+    <string name="choose_over_10s_action">Opsi</string>
+    <string name="trim_all_button">Potong semua &gt;10d</string>
+    <string name="skip_emote_button">Lewati emote</string>
+
+    <!-- My Sticker Packs & Collection Summary / Detail -->
+    <string name="my_packs_title">Paket Stiker Saya</string>
+    <string name="my_packs_empty_title">Belum ada paket stiker</string>
+    <string name="my_packs_empty_subtitle">Cari streamer atau emote 7TV dari Beranda untuk membuat paket stiker WhatsApp offline pertama Anda.</string>
+    <string name="my_packs_go_home">Jelajahi Emote 7TV</string>
+    <string name="pack_card_counts">%1$d total • %2$d anim. • %3$d statis</string>
+    <string name="pack_card_date">Dibuat %1$s</string>
+    <string name="pack_status_ready">Siap</string>
+    <string name="pack_status_draft">Draf (&lt;3 stiker)</string>
+    <string name="pack_status_processing">Memproses…</string>
+    <string name="pack_status_partial">Selesai dengan peringatan</string>
+    <string name="resume_progress_banner">Proses aktif atau dijeda: %1$s (%2$d/%3$d)</string>
+
+    <string name="collection_detail_stickers_title">Stiker dalam Paket (%1$d / 30)</string>
+    <string name="send_to_whatsapp">Kirim ke WhatsApp</string>
+    <string name="add_to_whatsapp">Tambahkan ke WhatsApp</string>
+    <string name="already_in_whatsapp">Ditambahkan ke WhatsApp (Impor ulang)</string>
+    <string name="pack_draft_too_few">Butuh %1$d stiker lagi untuk dikirim ke WhatsApp (minimal 3 stiker).</string>
+    <string name="pack_invalid_assets">Kesalahan validasi pada stiker \"%1$s\". Edit atau ulangi konversi sebelum mengirim.</string>
+    <string name="detail_format_static">Jenis paket: WebP Statis</string>
+    <string name="detail_format_animated">Jenis paket: WebP Animasi</string>
+    <string name="detail_format_mixed">Jenis paket: WebP Animasi Campuran (fake-vid untuk statis)</string>
+    <string name="summary_processing_ready">Semua %1$d stiker diproses dan diverifikasi secara lokal.</string>
+    <string name="summary_processing_partial">%1$d stiker siap • %2$d gagal atau dilewati.</string>
+    <string name="edit_collection">Edit paket</string>
+    <string name="delete_collection">Hapus</string>
+    <string name="cancel_creation">Batalkan pembuatan</string>
+
+    <!-- Cancel Creation Confirmation -->
+    <string name="cancel_creation_title">Batalkan pembuatan paket?</string>
+    <string name="cancel_creation_new_message">Ini akan menghapus draf paket \"%1$s\". File emote di cache yang dipakai paket lain tetap dipertahankan.</string>
+    <string name="cancel_creation_edit_message">Ini akan membatalkan perubahan dan mengembalikan \"%1$s\" ke kondisi tersimpan sebelumnya.</string>
+    <string name="confirm_cancel_creation">Buang perubahan</string>
+    <string name="keep_editing">Pertahankan paket</string>
+
+    <!-- WhatsApp Integration & Diagnostics -->
+    <string name="whatsapp_not_installed">WhatsApp maupun WhatsApp Business tidak terpasang di perangkat ini.</string>
+    <string name="whatsapp_incompatible">Versi WhatsApp yang terpasang tidak mendukung paket stiker pihak ketiga.</string>
+    <string name="whatsapp_choose_app">Pilih aplikasi WhatsApp</string>
+    <string name="whatsapp_personal">WhatsApp</string>
+    <string name="whatsapp_business">WhatsApp Business</string>
+    <string name="whatsapp_add_confirmed">Paket stiker ditambahkan ke WhatsApp.</string>
+    <string name="whatsapp_add_cancelled">Impor tidak dikonfirmasi di WhatsApp.</string>
+    <string name="whatsapp_add_error">Tidak dapat membuka impor stiker WhatsApp: %1$s</string>
+    <string name="whatsapp_compatibility_status">WhatsApp: %1$s • WhatsApp Business: %2$s</string>
+    <string name="status_installed">Terpasang</string>
+    <string name="status_not_installed">Tidak terpasang</string>
+
+    <!-- Delete Confirmation -->
+    <string name="delete_dialog_title">Hapus \"%1$s\"?</string>
+    <string name="delete_dialog_message">Tindakan ini menghapus koleksi beserta metadata paket dari EmotePack. File emote bersama yang masih dipakai paket lain tidak akan terpengaruh.\n\nPenting: Menghapus paket dari aplikasi ini tidak otomatis menghapusnya dari WhatsApp; paket yang sudah diimpor harus dikelola di dalam WhatsApp.</string>
+    <string name="confirm_delete">Hapus</string>
+    <string name="cancel">Batal</string>
+
+    <!-- Backup Export / Import -->
+    <string name="backup_export">Ekspor cadangan</string>
+    <string name="backup_import">Impor cadangan</string>
+    <string name="backup_export_success">Cadangan diekspor (%1$d koleksi).</string>
+    <string name="backup_export_empty">Tidak ada koleksi untuk dicadangkan.</string>
+    <string name="backup_import_success">%1$d koleksi diimpor secara offline.</string>
+    <string name="backup_error">Operasi cadangan gagal: %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_language_section">Bahasa</string>
+    <string name="settings_language_current">Bahasa saat ini: %1$s</string>
+    <string name="lang_system">Otomatis sistem</string>
+    <string name="lang_es">Español</string>
+    <string name="lang_en">English</string>
+    <string name="lang_pt">Português</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_hi">हिन्दी</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+
+    <string name="settings_storage_section">Penyimpanan Lokal &amp; Cache</string>
+    <string name="settings_storage_collections">Paket tersimpan &amp; varian: %1$s</string>
+    <string name="settings_storage_cache">Unduhan asli &amp; cache API: %1$s</string>
+    <string name="settings_storage_free">Ruang bebas perangkat: %1$s</string>
+    <string name="settings_clear_cache">Bersihkan cache tak terpakai</string>
+    <string name="settings_cache_cleared">Cache tak terpakai dibersihkan (paket tersimpan tetap aman).</string>
+    <string name="settings_backup_section">Cadangan Transfer Perangkat</string>
+    <string name="settings_about_section">Tentang &amp; Legal</string>
+    <string name="settings_7tv_info">Informasi Sumber 7TV</string>
+    <string name="settings_7tv_desc">Menggunakan API publik resmi 7TV v3 untuk mencari kreator, set emote, dan varian resolusi tinggi tanpa scraping.</string>
+    <string name="settings_privacy_policy">Kebijakan Privasi</string>
+
+    <!-- App Info & Privacy Policy -->
+    <string name="info_version">Versi %1$s</string>
+    <string name="info_independence_title">Aplikasi Independen</string>
+    <string name="info_independence_body">EmotePack adalah alat independen dan tidak berafiliasi dengan, didukung oleh, atau disponsori oleh 7TV maupun WhatsApp / Meta.</string>
+    <string name="info_license_title">Dasar Lisensi (Fase 1)</string>
+    <string name="info_license_body">Rilis awal ini beroperasi di bawah kerangka lisensi Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0) sambil menunggu peninjauan hukum resmi sebelum publikasi. Emote diambil langsung dari katalog publik 7TV tanpa pemeriksaan hukum tambahan per emote.</string>
+    <string name="info_specs_title">Spesifikasi Konversi Stiker</string>
+    <string name="info_specs_body">• 1 Koleksi = 1 Paket WhatsApp (3 hingga 30 stiker; 1–2 disimpan lokal sebagai draf).\n• Statis: WebP 512×512, maks. 100 KB, latar transparan, tanpa bingkai putih buatan.\n• Animasi: WebP animasi 512×512, maks. 500 KB, maks. 10d, min. 8 ms/frame, menjaga transparansi.\n• Paket campuran: Emote statis otomatis memakai WebP animasi fake-vid agar semua tetap dalam satu paket.\n• Ikon baki: PNG 96×96, maks. 50 KB.</string>
+    <string name="privacy_policy_title">Kebijakan Privasi</string>
+    <string name="privacy_policy_body">EmotePack memproses seluruh konversi emote dan menyimpan semua koleksi stiker secara eksklusif di perangkat Anda. Tidak ada akun pengguna pribadi, pelacak analitik, atau server jarak jauh milik EmotePack yang digunakan. Permintaan jaringan hanya dikirim ke API publik dan CDN 7TV saat Anda mencari atau mengunduh emote, dan pengiriman ke WhatsApp berlangsung secara lokal melalui Intent dan ContentProvider saat Anda memulainya.</string>
+
+    <!-- Errors & Network -->
+    <string name="error_network">Kesalahan jaringan. Periksa koneksi Anda dan coba lagi.</string>
+    <string name="error_conversion_timeout">Konversi melebihi batas waktu. Coba lagi emote ini.</string>
+    <string name="error_conversion_failed">Gagal mengonversi emote.</string>
+    <string name="error_api">Kesalahan API 7TV (%1$s). Silakan coba lagi.</string>
+    <string name="error_retry">Coba lagi</string>
+    <string name="ok">OK</string>
+</resources>

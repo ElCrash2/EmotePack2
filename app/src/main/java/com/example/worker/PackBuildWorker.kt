@@ -179,8 +179,7 @@ class PackBuildWorker(
             !existingPath.isNullOrBlank()
         ) {
             val file = File(existingPath)
-            val allowOver10s = item.conversionMode == ConversionModeType.ANIMATED_LOWER_QUALITY
-            if (StickerConverter.validateExistingWebp(file, expectAnimatedOutput, allowOver10s = allowOver10s) != null) {
+            if (StickerConverter.validateExistingWebp(file, expectAnimatedOutput, allowOver10s = false) != null) {
                 return
             }
         }
@@ -202,8 +201,12 @@ class PackBuildWorker(
             val cacheEntry = repo.getEmoteCache(cacheKey)
                 ?: if (item.versionUpdatedAt == 0L) repo.getLatestEmoteCache(item.emoteId) else null
 
-            // Step A: Reuse validated shared-cache variant (skip when user explicitly requested LOWER_QUALITY)
-            if (over10sHandling != Over10sHandling.LOWER_QUALITY &&
+            // Step A: Reuse validated shared-cache variant ONLY if original was not >10s
+            // (so >10s emotes always let the user choose Trim vs Lower Quality/FPS per pack).
+            val cachedOriginalOver10s = expectAnimatedOutput &&
+                StickerConverter.isOriginalFileOver10s(cacheEntry?.originalFilePath?.let(::File))
+            if (over10sHandling == Over10sHandling.ASK_USER &&
+                !cachedOriginalOver10s &&
                 cacheEntry != null &&
                 cacheEntry.converterVersion == AppConfig.CONVERTER_VERSION
             ) {
@@ -214,7 +217,7 @@ class PackBuildWorker(
                 }
                 val variantFile = cachedVariantPath?.let(::File)
                 val info = if (variantFile != null && variantFile.exists()) {
-                    StickerConverter.validateExistingWebp(variantFile, expectAnimatedOutput)
+                    StickerConverter.validateExistingWebp(variantFile, expectAnimatedOutput, allowOver10s = false)
                 } else null
 
                 if (info != null && variantFile != null) {
@@ -311,16 +314,23 @@ class PackBuildWorker(
                 when (outcome) {
                     is ConversionOutcome.Success -> {
                         repo.updateItem(item.copy(status = ItemConversionStatus.VALIDATING))
-                        val finalModeName = if (outcome.preservedOver10s) {
+                        val finalModeName = if (over10sHandling == Over10sHandling.LOWER_QUALITY && outcome.sourceWasOver10s) {
                             ConversionModeType.ANIMATED_LOWER_QUALITY
                         } else {
                             outcome.conversionMode.name
                         }
-                        val variantFile = repo.storage.getSharedVariantFile(
-                            emoteId = item.emoteId,
-                            versionKey = effectiveVersionKey,
-                            mode = finalModeName
-                        )
+                        val variantFile = if (outcome.sourceWasOver10s) {
+                            repo.storage.getStickerFile(
+                                collectionId = item.collectionId,
+                                fileName = sanitizeStickerFileName(item.emoteId)
+                            )
+                        } else {
+                            repo.storage.getSharedVariantFile(
+                                emoteId = item.emoteId,
+                                versionKey = effectiveVersionKey,
+                                mode = finalModeName
+                            )
+                        }
                         variantFile.writeBytes(outcome.webpBytes)
 
                         updateSharedCacheEntry(
@@ -332,7 +342,7 @@ class PackBuildWorker(
                             originalFile = originalFile,
                             mode = outcome.conversionMode,
                             variantFile = variantFile,
-                            preservedOver10s = outcome.preservedOver10s
+                            skipAnimatedVariantCache = outcome.sourceWasOver10s
                         )
 
                         repo.updateItem(
@@ -363,7 +373,7 @@ class PackBuildWorker(
                                 originalFile = originalFile,
                                 mode = targetMode,
                                 variantFile = originalFile,
-                                preservedOver10s = true
+                                skipAnimatedVariantCache = true
                             )
                         }
                         repo.updateItem(
@@ -449,7 +459,7 @@ class PackBuildWorker(
         originalFile: File?,
         mode: StickerConversionMode,
         variantFile: File,
-        preservedOver10s: Boolean = false
+        skipAnimatedVariantCache: Boolean = false
     ) {
         val now = System.currentTimeMillis()
         val base = existing ?: EmoteCacheEntity(
@@ -467,9 +477,10 @@ class PackBuildWorker(
             createdAt = now,
             lastUsedAt = now
         )
-        val updated = if (preservedOver10s) {
+        val updated = if (skipAnimatedVariantCache) {
             base.copy(
                 originalFilePath = originalFile?.absolutePath ?: base.originalFilePath,
+                animatedWebpPath = null,
                 converterVersion = AppConfig.CONVERTER_VERSION,
                 lastUsedAt = now
             )

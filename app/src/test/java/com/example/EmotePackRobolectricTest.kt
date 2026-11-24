@@ -87,23 +87,48 @@ class EmotePackRobolectricTest {
         }
 
     @Test
-    fun `localization switches cleanly between Spanish and English`() {
+    fun `localization switches cleanly across all supported languages and resolves Indonesian tags`() {
         val base = ApplicationProvider.getApplicationContext<Context>()
 
-        val esConfig = Configuration(base.resources.configuration).apply { setLocale(Locale.forLanguageTag("es")) }
-        val esContext = base.createConfigurationContext(esConfig)
-        assertEquals("Buscar streamer", esContext.getString(R.string.search_streamer_label))
-        assertEquals("Seleccionar primeros 30", esContext.getString(R.string.select_first_30))
-        assertEquals("Cancelar creación", esContext.getString(R.string.cancel_creation))
-        assertEquals("Enviar a WhatsApp", esContext.getString(R.string.send_to_whatsapp))
+        fun ctxFor(tag: String): Context {
+            val cfg = Configuration(base.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag(tag))
+            }
+            return base.createConfigurationContext(cfg)
+        }
 
-        val enConfig = Configuration(base.resources.configuration).apply { setLocale(Locale.ENGLISH) }
-        val enContext = base.createConfigurationContext(enConfig)
-        assertEquals("Search streamer", enContext.getString(R.string.search_streamer_label))
-        assertEquals("Select first 30", enContext.getString(R.string.select_first_30))
-        assertEquals("Cancel creation", enContext.getString(R.string.cancel_creation))
-        assertEquals("Send to WhatsApp", enContext.getString(R.string.send_to_whatsapp))
-        assertEquals("EmotePack", AppConfig.getPackAuthor(enContext))
+        val expectedLabels = listOf(
+            "es" to "Buscar streamer",
+            "en" to "Search streamer",
+            "pt" to "Pesquisar streamer",
+            "ru" to "Поиск стримера",
+            "fr" to "Rechercher un streamer",
+            "de" to "Streamer suchen",
+            "hi" to "स्ट्रीमर खोजें",
+            "in" to "Cari streamer",
+            "id" to "Cari streamer"
+        )
+
+        for ((tag, expected) in expectedLabels) {
+            val localized = ctxFor(tag)
+            assertEquals("Mismatch for tag=$tag", expected, localized.getString(R.string.search_streamer_label))
+            assertEquals("EmotePack", AppConfig.getPackAuthor(localized))
+            // Verify key format-argument strings don't fail formatting in any locale
+            localized.getString(R.string.trim_dialog_message, "peepoHappy", 12.5f)
+            localized.getString(R.string.progress_counts_format, 3, 2, 1)
+            localized.getString(R.string.editing_banner, "PackName", 10)
+            localized.getString(R.string.settings_language_current, localized.getString(R.string.lang_system))
+        }
+
+        // Verify PreferencesRepository enum mapping & system auto behavior
+        assertEquals(com.example.data.local.AppLanguage.INDONESIAN, com.example.data.local.AppLanguage.fromCode("id"))
+        assertEquals(com.example.data.local.AppLanguage.INDONESIAN, com.example.data.local.AppLanguage.fromCode("in"))
+        assertEquals(com.example.data.local.AppLanguage.RUSSIAN, com.example.data.local.AppLanguage.fromCode("ru"))
+        assertEquals(com.example.data.local.AppLanguage.PORTUGUESE, com.example.data.local.AppLanguage.fromCode("pt"))
+        assertEquals(com.example.data.local.AppLanguage.FRENCH, com.example.data.local.AppLanguage.fromCode("fr"))
+        assertEquals(com.example.data.local.AppLanguage.GERMAN, com.example.data.local.AppLanguage.fromCode("de"))
+        assertEquals(com.example.data.local.AppLanguage.HINDI, com.example.data.local.AppLanguage.fromCode("hi"))
+        assertEquals(com.example.data.local.AppLanguage.SYSTEM, com.example.data.local.AppLanguage.fromCode(null))
     }
 
     @Test
@@ -574,14 +599,14 @@ class EmotePackRobolectricTest {
     }
 
     @Test
-    fun `over 10s lower quality preserves full duration under 500 KB and validates for pack`() {
+    fun `over 10s lower quality compresses full animation under 10s and 500 KB and validates for pack`() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         val frames = List(6) { idx ->
             val bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply {
                 eraseColor(Color.TRANSPARENT)
                 val canvas = Canvas(this)
                 val paint = Paint().apply { color = if (idx % 2 == 0) Color.MAGENTA else Color.CYAN }
-                canvas.drawCircle(32f, 32f, 24f, paint)
+                canvas.drawRect(4f, 4f, 60f, 60f, paint)
             }
             DecodedFrame(bitmap = bmp, durationMs = 2_400)
         }
@@ -595,16 +620,18 @@ class EmotePackRobolectricTest {
         )
         assertTrue(lowered is ConversionOutcome.Success)
         val success = lowered as ConversionOutcome.Success
-        assertTrue(success.preservedOver10s)
+        assertTrue(success.sourceWasOver10s)
+        assertFalse(success.preservedOver10s)
         assertTrue(success.isAnimated)
         assertEquals(512, success.inspection.width)
         assertEquals(512, success.inspection.height)
-        assertTrue(success.inspection.totalDurationMs > 10_000)
+        assertEquals(6, success.inspection.frameCount)
+        assertTrue(success.inspection.totalDurationMs in 1..10_000)
         assertTrue(success.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
 
         val storage = LocalStorageManager(ctx)
         val colId = "col_over10s"
-        val variantFile = storage.getSharedVariantFile("over10", "v1", ConversionModeType.ANIMATED_LOWER_QUALITY)
+        val variantFile = storage.getStickerFile(colId, LocalStorageManager.sanitizeStickerFileName("over10_1"))
         variantFile.writeBytes(success.webpBytes)
 
         val items = (1..3).map { idx ->
@@ -658,7 +685,7 @@ class EmotePackRobolectricTest {
                 val paint = Paint().apply {
                     color = Color.rgb((idx * 6) % 255, 180, (255 - idx * 5) % 255)
                 }
-                canvas.drawCircle(16f + (idx % 32), 32f, 18f, paint)
+                canvas.drawRect(2f, 2f, 62f, 62f, paint)
             }
             DecodedFrame(bitmap = bmp, durationMs = 300) // 12,000 ms total
         }
@@ -680,6 +707,7 @@ class EmotePackRobolectricTest {
         )
         assertTrue(trimResult is ConversionOutcome.Success)
         val trimSuccess = trimResult as ConversionOutcome.Success
+        assertTrue(trimSuccess.sourceWasOver10s)
         assertTrue(trimSuccess.inspection.totalDurationMs <= 10_000)
         assertTrue(trimSuccess.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
 
@@ -690,11 +718,101 @@ class EmotePackRobolectricTest {
         )
         assertTrue(lowQResult is ConversionOutcome.Success)
         val lowQSuccess = lowQResult as ConversionOutcome.Success
-        assertTrue(lowQSuccess.preservedOver10s)
-        assertTrue(lowQSuccess.inspection.totalDurationMs > 10_000)
+        assertTrue(lowQSuccess.sourceWasOver10s)
+        assertTrue(lowQSuccess.inspection.totalDurationMs in 1..10_000)
         assertTrue(lowQSuccess.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
+        // Verify full-canvas scaling preserves non-shrunken sticker size (pixel near outer border stays non-transparent)
+        val decodedLowQ = WebPContainer.decodeAnimatedFrames(lowQSuccess.webpBytes)
+        assertTrue(decodedLowQ.isNotEmpty())
+        val firstBmp = decodedLowQ.first().bitmap
+        assertEquals(512, firstBmp.width)
+        assertTrue((firstBmp.getPixel(40, 40) ushr 24) > 20)
+        decodedLowQ.forEach { it.bitmap.recycle() }
+    }
+
+    @Test
+    fun `over 10s trim choice does not lock future collections into auto-reusing trimmed webp`() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val db = AppDatabase.getInstance(ctx)
+        val storage = LocalStorageManager(ctx)
+        val repo = CollectionRepository(ctx, db, storage)
+
+        val frames = List(6) {
+            val bmp = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
+            DecodedFrame(bmp, 2_200) // 13,200 ms total (> 10s)
+        }
+        val origBytes = WebPContainer.encodeAnimatedWebP(frames, 64, 64, quality = 80)
+        frames.forEach { it.bitmap.recycle() }
+
+        val emote = sampleEmotes(1, animatedEvery = 1).first().copy(id = "long_emote_99", updatedAt = 999L)
+        val origFile = storage.getSharedOriginalFile(emote.id, emote.versionKey, "webp").apply { writeBytes(origBytes) }
+        val trimRes = StickerConverter.convert(origBytes, StickerConversionMode.ANIMATED, Over10sHandling.TRIM_10S) as ConversionOutcome.Success
+        val fakeCachedTrim = storage.getSharedVariantFile(emote.id, emote.versionKey, ConversionModeType.ANIMATED).apply {
+            writeBytes(trimRes.webpBytes)
+        }
+
+        // Even if an older cache entry recorded animatedWebpPath alongside a >10s original,
+        // new collections must NOT silently bypass the user prompt!
+        db.emoteCacheDao().upsert(
+            EmoteCacheEntity(
+                cacheKey = "${emote.id}_${emote.versionKey}",
+                emoteId = emote.id,
+                versionKey = emote.versionKey,
+                updatedAt = emote.updatedAt,
+                sourceUrl = emote.highResUrl,
+                originalFormat = "webp",
+                originalFilePath = origFile.absolutePath,
+                staticWebpPath = null,
+                animatedWebpPath = fakeCachedTrim.absolutePath,
+                fakeVidWebpPath = null,
+                converterVersion = AppConfig.CONVERTER_VERSION,
+                createdAt = 1L,
+                lastUsedAt = 1L
+            )
+        )
+
+        val newColId = repo.prepareCollectionBuild(null, "Second Pack", SearchOrigin(SearchOriginType.EMOTE, "Long"), listOf(emote))
+        val details = repo.getCollectionWithDetails(newColId)
+        assertNotNull(details)
+        assertEquals(ItemConversionStatus.PENDING, details!!.items.first().status)
+    }
+
+    @Test
+    fun `high entropy noisy over 10s animation fits under 500 KB and 10s with lower quality`() {
+        val rng = java.util.Random(42)
+        val pixels = IntArray(256 * 256)
+        val frames = List(48) { idx ->
+            for (y in 0 until 256) {
+                for (x in 0 until 256) {
+                    val checker = ((x / 4 + y / 4 + idx) and 1) * 90
+                    val a = if ((x - 128) * (x - 128) + (y - 128) * (y - 128) < 120 * 120) {
+                        (180 + rng.nextInt(76)).coerceAtMost(255)
+                    } else {
+                        rng.nextInt(60)
+                    }
+                    val r = (checker + rng.nextInt(150)).coerceAtMost(255)
+                    val g = ((x + idx * 17) % 255 + rng.nextInt(80)) / 2
+                    val b = ((y + idx * 31) % 255 + rng.nextInt(80)) / 2
+                    pixels[y * 256 + x] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            }
+            val bmp = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
+            bmp.setPixels(pixels, 0, 256, 0, 0, 256, 256)
+            DecodedFrame(bmp, 300) // 14,400 ms total (> 10s)
+        }
+        val noisyLongWebp = WebPContainer.encodeAnimatedWebP(frames, 256, 256, quality = 75)
+        frames.forEach { it.bitmap.recycle() }
+
+        val result = StickerConverter.convert(
+            inputBytes = noisyLongWebp,
+            mode = StickerConversionMode.ANIMATED,
+            over10sHandling = Over10sHandling.LOWER_QUALITY
+        )
+        assertTrue("Expected success even on noisy >10s emote, got: $result", result is ConversionOutcome.Success)
+        val success = result as ConversionOutcome.Success
+        assertTrue(success.sourceWasOver10s)
+        assertTrue(success.inspection.totalDurationMs in 1..10_000)
+        assertTrue(success.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
+        assertTrue(success.inspection.frameCount >= 2)
     }
 }
-
-
-

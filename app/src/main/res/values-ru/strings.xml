@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">EmotePack</string>
+    <string name="app_tagline">Эмоуты 7TV в стикеры WhatsApp</string>
+
+    <!-- Navigation & Drawer -->
+    <string name="nav_menu_open">Открыть меню навигации</string>
+    <string name="nav_back">Назад</string>
+    <string name="nav_home">Главная</string>
+    <string name="nav_my_packs">Мои наборы стикеров</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="nav_app_info">О приложении</string>
+
+    <!-- Home Screen & Dual Search -->
+    <string name="home_hero_title">Создавайте стикерпаки для WhatsApp</string>
+    <string name="home_hero_subtitle">Ищите стримеров или отдельные эмоуты на 7TV, выберите до 30 любимых и экспортируйте их вместе в один набор WhatsApp.</string>
+    <string name="search_streamer_label">Поиск стримера</string>
+    <string name="search_streamer_hint">Канал или имя автора (напр. xQc, Rubius)</string>
+    <string name="search_emote_label">Поиск эмоута</string>
+    <string name="search_emote_hint">Название эмоута (напр. peepoHappy, chiqiuto)</string>
+    <string name="search_button">Найти</string>
+    <string name="search_empty_validation">Введите имя стримера или название эмоута перед поиском.</string>
+    <string name="search_active_mode_streamer">Активный поиск: Стример</string>
+    <string name="search_active_mode_emote">Активный поиск: Эмоут</string>
+    <string name="search_results_streamers_title">Найденные стримеры</string>
+    <string name="search_no_streamers_found">Стримеры по запросу \"%1$s\" не найдены.</string>
+    <string name="search_loading_streamers">Поиск пользователей 7TV…</string>
+    <string name="search_load_more">Загрузить ещё</string>
+    <string name="streamer_username_handle">@%1$s</string>
+    <string name="streamer_sets_count">Наборов эмоутов: %1$d</string>
+
+    <!-- Streamer Emotes & Emote Search Grids -->
+    <string name="streamer_emotes_title">%1$s</string>
+    <string name="emote_search_title">Эмоуты: %1$s</string>
+    <string name="filter_all_sets">Все наборы (%1$d)</string>
+    <string name="select_first_30">Выбрать первые 30</string>
+    <string name="selected_count_format">Выбрано: %1$d / 30</string>
+    <string name="max_30_stickers_reached">Лимит достигнут: в одном наборе WhatsApp может быть не более 30 стикеров.</string>
+    <string name="create_pack_action">Создать набор</string>
+    <string name="save_edits_action">Сохранить изменения</string>
+    <string name="badge_animated">АНИМ</string>
+    <string name="badge_static">ИЗОБР</string>
+    <string name="no_emotes_found">Эмоуты не найдены.</string>
+    <string name="loading_emotes">Загрузка эмоутов…</string>
+    <string name="loading_emote_set">Загрузка набора эмоутов…</string>
+    <string name="select_at_least_one">Выберите хотя бы один эмоут для создания набора.</string>
+    <string name="editing_banner">Редактирование \"%1$s\" — %2$d / 30 выбрано</string>
+    <string name="new_search_prompt">Найти другой эмоут</string>
+
+    <!-- Create / Review Collection Screen -->
+    <string name="create_collection_title">Новый набор стикеров</string>
+    <string name="edit_collection_title">Редактировать набор стикеров</string>
+    <string name="collection_name_label">Название коллекции</string>
+    <string name="collection_name_hint">Введите название для вашего набора стикеров</string>
+    <string name="collection_name_required">Пожалуйста, введите название коллекции.</string>
+    <string name="summary_total">Всего: %1$d</string>
+    <string name="summary_animated">Анимированных: %1$d</string>
+    <string name="summary_static">Статичных: %1$d</string>
+    <string name="whatsapp_split_preview_title">Единый формат набора WhatsApp</string>
+    <string name="pack_format_static">Статичный WebP-набор (512×512, ≤100 КБ на стикер).</string>
+    <string name="pack_format_animated">Анимированный WebP-набор (512×512, ≤500 КБ на стикер).</string>
+    <string name="pack_format_mixed_fake_vid">Смешанный выбор: статичные изображения будут преобразованы через fake-vid в неподвижные анимированные WebP, чтобы все %1$d стикеров экспортировались одним набором WhatsApp.</string>
+    <string name="whatsapp_draft_warning">Примечание: локальный черновик можно сохранить с 1–2 стикерами, но для отправки в WhatsApp требуется минимум 3 стикера.</string>
+    <string name="confirm_create_pack">Скачать и конвертировать</string>
+    <string name="confirm_update_pack">Сохранить и пересобрать</string>
+    <string name="remove_emote_cd">Удалить %1$s</string>
+    <string name="insufficient_storage_error">Недостаточно свободного места на устройстве (нужно минимум %1$d МБ).</string>
+
+    <!-- Download & Conversion Progress -->
+    <string name="build_progress_title">Обработка набора стикеров</string>
+    <string name="progress_counts_format">Обработано: %1$d • Ожидают: %2$d • Ошибки: %3$d</string>
+    <string name="status_pending">В очереди</string>
+    <string name="status_downloading">Скачивание оригинала…</string>
+    <string name="status_converting">Конвертация в WebP…</string>
+    <string name="status_validating">Проверка ограничений…</string>
+    <string name="status_completed">Готово (%1$d КБ)</string>
+    <string name="status_failed">Ошибка: %1$s</string>
+    <string name="status_needs_trim">Длиннее 10с (%1$.1fс)</string>
+    <string name="status_cancelled">Отменено</string>
+    <string name="retry_failed">Повторить сбойные</string>
+    <string name="cancel_operation">Отменить создание</string>
+    <string name="view_created_pack">Открыть сводку</string>
+    <string name="notification_channel_name">Загрузки наборов стикеров</string>
+    <string name="notification_channel_desc">Показывает прогресс скачивания и конвертации эмоутов 7TV</string>
+    <string name="notification_progress_title">Сборка \"%1$s\"</string>
+    <string name="notification_progress_body">Обработано эмоутов: %1$d из %2$d</string>
+
+    <!-- Duration >10s Dialog -->
+    <string name="trim_dialog_title">Анимация длиннее 10 секунд</string>
+    <string name="trim_dialog_message">Эмоут \"%1$s\" длится %2$.1f сек. (ограничение WhatsApp: до 10с и 500 КБ). Вы можете сжать весь эмоут в 10с со снижением качества и FPS, обрезать до первых 10 секунд или пропустить его.</string>
+    <string name="trim_one_button">Обрезать до первых 10с</string>
+    <string name="lower_quality_over10s_button">Снизить качество и FPS (%1$.1fс в 10с)</string>
+    <string name="apply_all_over10s_checkbox">Применить ко всем %1$d эмоутам &gt;10с</string>
+    <string name="choose_over_10s_action">Варианты</string>
+    <string name="trim_all_button">Обрезать все &gt;10с</string>
+    <string name="skip_emote_button">Пропустить эмоут</string>
+
+    <!-- My Sticker Packs & Collection Summary / Detail -->
+    <string name="my_packs_title">Мои наборы стикеров</string>
+    <string name="my_packs_empty_title">Пока нет наборов стикеров</string>
+    <string name="my_packs_empty_subtitle">Найдите стримера или эмоут 7TV на Главной, чтобы создать свой первый офлайн-стикерпак для WhatsApp.</string>
+    <string name="my_packs_go_home">Искать эмоуты 7TV</string>
+    <string name="pack_card_counts">Всего: %1$d • Аним.: %2$d • Стат.: %3$d</string>
+    <string name="pack_card_date">Создано %1$s</string>
+    <string name="pack_status_ready">Готов</string>
+    <string name="pack_status_draft">Черновик (&lt;3 стикеров)</string>
+    <string name="pack_status_processing">Обработка…</string>
+    <string name="pack_status_partial">Готово с предупреждениями</string>
+    <string name="resume_progress_banner">Активная или приостановленная сборка: %1$s (%2$d/%3$d)</string>
+
+    <string name="collection_detail_stickers_title">Стикеры в наборе (%1$d / 30)</string>
+    <string name="send_to_whatsapp">Отправить в WhatsApp</string>
+    <string name="add_to_whatsapp">Добавить в WhatsApp</string>
+    <string name="already_in_whatsapp">Добавлен в WhatsApp (повторить)</string>
+    <string name="pack_draft_too_few">Нужно ещё %1$d стикер(а/ов) для отправки в WhatsApp (минимум 3 стикера).</string>
+    <string name="pack_invalid_assets">Ошибка проверки стикера \"%1$s\". Измените или повторите конвертацию перед отправкой.</string>
+    <string name="detail_format_static">Тип набора: Статичный WebP</string>
+    <string name="detail_format_animated">Тип набора: Анимированный WebP</string>
+    <string name="detail_format_mixed">Тип набора: Смешанный анимированный WebP (fake-vid для статичных)</string>
+    <string name="summary_processing_ready">Все %1$d стикеров обработаны и проверены локально.</string>
+    <string name="summary_processing_partial">Готово стикеров: %1$d • Ошибок или пропущено: %2$d.</string>
+    <string name="edit_collection">Изменить набор</string>
+    <string name="delete_collection">Удалить</string>
+    <string name="cancel_creation">Отменить создание</string>
+
+    <!-- Cancel Creation Confirmation -->
+    <string name="cancel_creation_title">Отменить создание набора?</string>
+    <string name="cancel_creation_new_message">Черновик набора \"%1$s\" будет удалён. Кэшированные файлы эмоутов, используемые другими наборами, сохранятся.</string>
+    <string name="cancel_creation_edit_message">Изменения будут отменены, а \"%1$s\" вернётся к прежнему сохранённому состоянию.</string>
+    <string name="confirm_cancel_creation">Отменить изменения</string>
+    <string name="keep_editing">Сохранить набор</string>
+
+    <!-- WhatsApp Integration & Diagnostics -->
+    <string name="whatsapp_not_installed">Ни WhatsApp, ни WhatsApp Business не установлены на этом устройстве.</string>
+    <string name="whatsapp_incompatible">Установленная версия WhatsApp не поддерживает сторонние наборы стикеров.</string>
+    <string name="whatsapp_choose_app">Выберите приложение WhatsApp</string>
+    <string name="whatsapp_personal">WhatsApp</string>
+    <string name="whatsapp_business">WhatsApp Business</string>
+    <string name="whatsapp_add_confirmed">Набор стикеров добавлен в WhatsApp.</string>
+    <string name="whatsapp_add_cancelled">Импорт в WhatsApp не был подтверждён.</string>
+    <string name="whatsapp_add_error">Не удалось запустить импорт в WhatsApp: %1$s</string>
+    <string name="whatsapp_compatibility_status">WhatsApp: %1$s • WhatsApp Business: %2$s</string>
+    <string name="status_installed">Установлен</string>
+    <string name="status_not_installed">Не установлен</string>
+
+    <!-- Delete Confirmation -->
+    <string name="delete_dialog_title">Удалить \"%1$s\"?</string>
+    <string name="delete_dialog_message">Это удалит коллекцию и метаданные набора из EmotePack. Общие файлы эмоутов, используемые другими наборами, затронуты не будут.\n\nВажно: удаление набора из этого приложения не удаляет его автоматически из WhatsApp; уже импортированные наборы нужно удалять в самом WhatsApp.</string>
+    <string name="confirm_delete">Удалить</string>
+    <string name="cancel">Отмена</string>
+
+    <!-- Backup Export / Import -->
+    <string name="backup_export">Экспорт копии</string>
+    <string name="backup_import">Импорт копии</string>
+    <string name="backup_export_success">Резервная копия экспортирована (коллекций: %1$d).</string>
+    <string name="backup_export_empty">Нет коллекций для резервного копирования.</string>
+    <string name="backup_import_success">Импортировано коллекций офлайн: %1$d.</string>
+    <string name="backup_error">Ошибка резервного копирования: %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_language_section">Язык</string>
+    <string name="settings_language_current">Текущий язык: %1$s</string>
+    <string name="lang_system">Системный (автоматически)</string>
+    <string name="lang_es">Español</string>
+    <string name="lang_en">English</string>
+    <string name="lang_pt">Português</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_de">Deutsch</string>
+    <string name="lang_hi">हिन्दी</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+
+    <string name="settings_storage_section">Локальное хранилище и кэш</string>
+    <string name="settings_storage_collections">Сохранённые наборы и варианты: %1$s</string>
+    <string name="settings_storage_cache">Оригинальные загрузки и кэш API: %1$s</string>
+    <string name="settings_storage_free">Свободно на устройстве: %1$s</string>
+    <string name="settings_clear_cache">Очистить неиспользуемый кэш</string>
+    <string name="settings_cache_cleared">Неиспользуемый кэш очищен (сохранённые наборы не затронуты).</string>
+    <string name="settings_backup_section">Резервная копия для переноса</string>
+    <string name="settings_about_section">О приложении и правовая информация</string>
+    <string name="settings_7tv_info">Об источнике 7TV</string>
+    <string name="settings_7tv_desc">Использует официальный публичный API 7TV v3 для поиска авторов, наборов эмоутов и вариантов высокого качества без скрейпинга.</string>
+    <string name="settings_privacy_policy">Политика конфиденциальности</string>
+
+    <!-- App Info & Privacy Policy -->
+    <string name="info_version">Версия %1$s</string>
+    <string name="info_independence_title">Независимое приложение</string>
+    <string name="info_independence_body">EmotePack — независимый инструмент, не связанный, не одобренный и не спонсируемый 7TV или WhatsApp / Meta.</string>
+    <string name="info_license_title">Лицензия (Этап 1)</string>
+    <string name="info_license_body">Этот начальный выпуск работает в рамках лицензии Creative Commons Attribution-ShareAlike 3.0 (CC BY-SA 3.0) до проведения официальной юридической проверки перед публикацией. Эмоуты загружаются напрямую из публичных каталогов 7TV без дополнительных проверок прав по каждому эмоуту.</string>
+    <string name="info_specs_title">Параметры конвертации стикеров</string>
+    <string name="info_specs_body">• 1 коллекция = 1 набор WhatsApp (от 3 до 30 стикеров; 1–2 сохраняются локально как черновик).\n• Статичные: WebP 512×512, макс. 100 КБ, прозрачный фон, без искусственной белой рамки.\n• Анимированные: анимированный WebP 512×512, макс. 500 КБ, макс. 10с, мин. 8 мс/кадр, с сохранением прозрачности.\n• Смешанные наборы: статичные эмоуты автоматически используют fake-vid анимированный WebP, чтобы всё оставалось в одном наборе.\n• Значок набора: PNG 96×96, макс. 50 КБ.</string>
+    <string name="privacy_policy_title">Политика конфиденциальности</string>
+    <string name="privacy_policy_body">EmotePack выполняет всю конвертацию эмоутов и хранит все коллекции стикеров исключительно на вашем устройстве. Личные аккаунты, аналитические трекеры и собственные удалённые серверы не используются. Сетевые запросы отправляются только к публичному API и CDN 7TV при поиске и скачивании эмоутов, а передача стикеров в WhatsApp происходит локально через Intent и ContentProvider по вашей инициативе.</string>
+
+    <!-- Errors & Network -->
+    <string name="error_network">Ошибка сети. Проверьте подключение и повторите попытку.</string>
+    <string name="error_conversion_timeout">Превышено время конвертации. Повторите попытку для этого эмоута.</string>
+    <string name="error_conversion_failed">Не удалось конвертировать эмоут.</string>
+    <string name="error_api">Ошибка API 7TV (%1$s). Повторите попытку.</string>
+    <string name="error_retry">Повторить</string>
+    <string name="ok">ОК</string>
+</resources>
