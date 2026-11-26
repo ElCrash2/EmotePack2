@@ -149,14 +149,6 @@
     <string name="confirm_delete">Удалить</string>
     <string name="cancel">Отмена</string>
 
-    <!-- Backup Export / Import -->
-    <string name="backup_export">Экспорт копии</string>
-    <string name="backup_import">Импорт копии</string>
-    <string name="backup_export_success">Резервная копия экспортирована (коллекций: %1$d).</string>
-    <string name="backup_export_empty">Нет коллекций для резервного копирования.</string>
-    <string name="backup_import_success">Импортировано коллекций офлайн: %1$d.</string>
-    <string name="backup_error">Ошибка резервного копирования: %1$s</string>
-
     <!-- Settings -->
     <string name="settings_title">Настройки</string>
     <string name="settings_language_section">Язык</string>
@@ -177,7 +169,6 @@
     <string name="settings_storage_free">Свободно на устройстве: %1$s</string>
     <string name="settings_clear_cache">Очистить неиспользуемый кэш</string>
     <string name="settings_cache_cleared">Неиспользуемый кэш очищен (сохранённые наборы не затронуты).</string>
-    <string name="settings_backup_section">Резервная копия для переноса</string>
     <string name="settings_about_section">О приложении и правовая информация</string>
     <string name="settings_7tv_info">Об источнике 7TV</string>
     <string name="settings_7tv_desc">Использует официальный публичный API 7TV v3 для поиска авторов, наборов эмоутов и вариантов высокого качества без скрейпинга.</string>

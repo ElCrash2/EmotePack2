@@ -17,6 +17,9 @@ interface SevenTvApiService {
     @POST("v4/gql")
     suspend fun queryGraphQlV4(@Body body: RequestBody): Response<ResponseBody>
 
+    @POST
+    suspend fun postGraphQl(@Url url: String, @Body body: RequestBody): Response<ResponseBody>
+
     @GET("v3/users/{id}")
     suspend fun getUserById(@Path("id") userId: String): Response<ResponseBody>
 

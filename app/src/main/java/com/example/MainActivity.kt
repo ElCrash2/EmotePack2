@@ -10,18 +10,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.example.data.model.SearchOrigin
 import com.example.data.model.SearchOriginType
 import com.example.data.model.SevenTvUser
 import com.example.databinding.ActivityMainBinding
-import com.example.ui.fragment.AppInfoFragment
 import com.example.ui.fragment.CollectionDetailFragment
 import com.example.ui.fragment.CreateCollectionFragment
 import com.example.ui.fragment.EmoteSearchFragment
@@ -29,12 +26,12 @@ import com.example.ui.fragment.HomeFragment
 import com.example.ui.fragment.MyPacksFragment
 import com.example.ui.fragment.SettingsFragment
 import com.example.ui.fragment.StreamerEmotesFragment
+import com.google.android.material.tabs.TabLayout
 
 interface AppNavigator {
     fun openHome()
     fun openMyPacks()
     fun openSettings()
-    fun openAppInfo()
     fun openStreamerEmotes(user: SevenTvUser, initialSetId: String? = null, startFreshSession: Boolean = true)
     fun openEmoteSearch(query: String, startFreshSession: Boolean = true)
     fun openCreateCollection(suggestedName: String)
@@ -57,8 +54,16 @@ interface AppNavigator {
 
 class MainActivity : AppCompatActivity(), AppNavigator {
 
+    companion object {
+        private const val KEY_ACTIVE_TAB = "active_root_tab"
+        private const val TAB_HOME = 0
+        private const val TAB_MY_PACKS = 1
+    }
+
     private lateinit var binding: ActivityMainBinding
     private var currentCreateAction: (() -> Unit)? = null
+    private var activeRootTabIndex: Int = TAB_HOME
+    private var suppressTabSelection = false
 
     private val requestNotifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -70,14 +75,23 @@ class MainActivity : AppCompatActivity(), AppNavigator {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        activeRootTabIndex = savedInstanceState?.getInt(KEY_ACTIVE_TAB, TAB_HOME) ?: TAB_HOME
+
         applyEdgeToEdgeInsets()
-        setupDrawerAndToolbar()
+        setupTopNavigationAndToolbar()
         setupBackNavigation()
         requestNotificationsIfNeeded()
 
         if (savedInstanceState == null) {
-            navigateRoot(HomeFragment(), R.id.nav_home)
+            navigateRoot(HomeFragment(), TAB_HOME)
+        } else {
+            selectTopTabSilently(activeRootTabIndex)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(KEY_ACTIVE_TAB, activeRootTabIndex)
     }
 
     private fun requestNotificationsIfNeeded() {
@@ -101,50 +115,49 @@ class MainActivity : AppCompatActivity(), AppNavigator {
             view.updatePadding(bottom = bars.bottom)
             insets
         }
-        ViewCompat.setOnApplyWindowInsetsListener(binding.navigationView) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(bottom = bars.bottom)
-            insets
-        }
     }
 
-    private fun setupDrawerAndToolbar() {
+    private fun setupTopNavigationAndToolbar() {
+        binding.topTabLayout.apply {
+            addTab(newTab().setText(R.string.nav_home))
+            addTab(newTab().setText(R.string.nav_my_packs))
+            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    if (suppressTabSelection) return
+                    when (tab.position) {
+                        TAB_HOME -> if (activeRootTabIndex != TAB_HOME || supportFragmentManager.backStackEntryCount > 0) {
+                            openHome()
+                        }
+                        TAB_MY_PACKS -> if (activeRootTabIndex != TAB_MY_PACKS || supportFragmentManager.backStackEntryCount > 0) {
+                            openMyPacks()
+                        }
+                    }
+                }
+
+                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+                override fun onTabReselected(tab: TabLayout.Tab) = Unit
+            })
+        }
+
         binding.toolbar.setNavigationOnClickListener {
             if (supportFragmentManager.backStackEntryCount > 0) {
                 supportFragmentManager.popBackStack()
-            } else {
-                binding.drawerLayout.openDrawer(GravityCompat.START)
             }
+        }
+
+        binding.btnToolbarSettings.setOnClickListener {
+            openSettings()
         }
 
         binding.toolbarCreatePackBtn.setOnClickListener {
             currentCreateAction?.invoke()
-        }
-
-        binding.navigationView.setNavigationItemSelectedListener { item ->
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
-            when (item.itemId) {
-                R.id.nav_home -> openHome()
-                R.id.nav_my_packs -> openMyPacks()
-                R.id.nav_settings -> openSettings()
-                R.id.nav_app_info -> openAppInfo()
-            }
-            true
-        }
-
-        supportFragmentManager.addOnBackStackChangedListener {
-            if (supportFragmentManager.backStackEntryCount == 0) {
-                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-            }
         }
     }
 
     private fun setupBackNavigation() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                    binding.drawerLayout.closeDrawer(GravityCompat.START)
-                } else if (supportFragmentManager.backStackEntryCount > 0) {
+                if (supportFragmentManager.backStackEntryCount > 0) {
                     supportFragmentManager.popBackStack()
                 } else {
                     isEnabled = false
@@ -154,18 +167,26 @@ class MainActivity : AppCompatActivity(), AppNavigator {
         })
     }
 
-    private fun navigateRoot(fragment: Fragment, menuItemId: Int) {
+    private fun selectTopTabSilently(tabIndex: Int) {
+        val tab = binding.topTabLayout.getTabAt(tabIndex) ?: return
+        if (!tab.isSelected) {
+            suppressTabSelection = true
+            tab.select()
+            suppressTabSelection = false
+        }
+    }
+
+    private fun navigateRoot(fragment: Fragment, tabIndex: Int) {
+        activeRootTabIndex = tabIndex
+        selectTopTabSilently(tabIndex)
         supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
             .replace(R.id.fragment_container, fragment)
             .commit()
-        binding.navigationView.setCheckedItem(menuItemId)
-        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
     }
 
     private fun pushFragment(fragment: Fragment) {
-        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
                 android.R.anim.fade_in,
@@ -178,10 +199,9 @@ class MainActivity : AppCompatActivity(), AppNavigator {
             .commit()
     }
 
-    override fun openHome() = navigateRoot(HomeFragment(), R.id.nav_home)
-    override fun openMyPacks() = navigateRoot(MyPacksFragment(), R.id.nav_my_packs)
-    override fun openSettings() = navigateRoot(SettingsFragment(), R.id.nav_settings)
-    override fun openAppInfo() = navigateRoot(AppInfoFragment(), R.id.nav_app_info)
+    override fun openHome() = navigateRoot(HomeFragment(), TAB_HOME)
+    override fun openMyPacks() = navigateRoot(MyPacksFragment(), TAB_MY_PACKS)
+    override fun openSettings() = pushFragment(SettingsFragment())
 
     override fun openStreamerEmotes(user: SevenTvUser, initialSetId: String?, startFreshSession: Boolean) {
         val app = application as EmotePackApplication
@@ -262,17 +282,21 @@ class MainActivity : AppCompatActivity(), AppNavigator {
     ) {
         binding.toolbarTitle.text = title ?: getString(R.string.app_name)
         binding.toolbarLogo.visibility = if (showBack) View.GONE else View.VISIBLE
+        binding.topTabLayout.visibility = if (showBack) View.GONE else View.VISIBLE
+
         if (showBack) {
             binding.toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
             binding.toolbar.navigationContentDescription = getString(R.string.nav_back)
         } else {
-            binding.toolbar.setNavigationIcon(R.drawable.ic_menu)
-            binding.toolbar.navigationContentDescription = getString(R.string.nav_menu_open)
+            binding.toolbar.navigationIcon = null
+            binding.toolbar.navigationContentDescription = null
+            selectTopTabSilently(activeRootTabIndex)
         }
 
         currentCreateAction = onCreatePackClick
         if (showCreatePackAction) {
             binding.toolbarCreatePackBtn.visibility = View.VISIBLE
+            binding.btnToolbarSettings.visibility = View.GONE
             val baseLabel = getString(if (isEditing) R.string.save_edits_action else R.string.create_pack_action)
             binding.toolbarCreatePackBtn.text = if (selectedCount > 0) {
                 "$baseLabel ($selectedCount)"
@@ -281,6 +305,7 @@ class MainActivity : AppCompatActivity(), AppNavigator {
             }
         } else {
             binding.toolbarCreatePackBtn.visibility = View.GONE
+            binding.btnToolbarSettings.visibility = if (showBack) View.GONE else View.VISIBLE
         }
     }
 }

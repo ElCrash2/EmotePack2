@@ -24,7 +24,9 @@
             android:background="@color/surface_elevated"
             android:contentDescription="@string/search_streamer_label"
             android:scaleType="centerCrop"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.EmotePack.Circle" />
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.EmotePack.Circle"
+            app:strokeColor="@color/stroke_subtle"
+            app:strokeWidth="1dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -39,9 +41,8 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.EmotePack.SectionTitle"
+                android:textColor="@color/text_primary" />
 
             <TextView
                 android:id="@+id/tv_streamer_username"
@@ -58,6 +59,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:fontFamily="@font/space_grotesk"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textColor="@color/accent_cyan"
                 android:visibility="gone" />

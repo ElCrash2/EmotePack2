@@ -18,11 +18,11 @@
 
         <ImageView
             android:id="@+id/iv_pack_icon"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_emote_card_normal"
+            android:layout_width="58dp"
+            android:layout_height="58dp"
+            android:background="@drawable/bg_emote_stage"
             android:contentDescription="@string/nav_my_packs"
-            android:padding="6dp"
+            android:padding="8dp"
             android:scaleType="fitCenter" />
 
         <LinearLayout
@@ -38,9 +38,8 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold" />
+                android:textAppearance="@style/TextAppearance.EmotePack.SectionTitle"
+                android:textColor="@color/text_primary" />
 
             <TextView
                 android:id="@+id/tv_pack_counts"
@@ -65,9 +64,11 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_badge_static"
-            android:paddingHorizontal="8dp"
+            android:fontFamily="@font/space_grotesk"
+            android:paddingHorizontal="9dp"
             android:paddingVertical="4dp"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            android:textColor="@color/accent_cyan" />
+            android:textColor="@color/accent_cyan"
+            android:textStyle="bold" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

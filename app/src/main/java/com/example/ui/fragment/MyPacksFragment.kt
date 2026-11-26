@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -15,9 +14,7 @@ import com.example.AppNavigator
 import com.example.R
 import com.example.databinding.FragmentMyPacksBinding
 import com.example.ui.adapter.CollectionPackAdapter
-import com.example.ui.viewmodel.BackupEvent
 import com.example.ui.viewmodel.MyPacksViewModel
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 class MyPacksFragment : Fragment() {
@@ -27,18 +24,6 @@ class MyPacksFragment : Fragment() {
     private val viewModel: MyPacksViewModel by viewModels()
 
     private lateinit var packAdapter: CollectionPackAdapter
-
-    private val exportLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri ->
-        if (uri != null) viewModel.exportBackup(uri)
-    }
-
-    private val importLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) viewModel.importBackup(uri)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -53,7 +38,7 @@ class MyPacksFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         (activity as? AppNavigator)?.configureToolbar(
-            title = getString(R.string.my_packs_title),
+            title = getString(R.string.app_name),
             showBack = false,
             showCreatePackAction = false
         )
@@ -66,14 +51,6 @@ class MyPacksFragment : Fragment() {
 
         binding.btnGoHome.setOnClickListener {
             (activity as? AppNavigator)?.openHome()
-        }
-
-        binding.btnExportBackup.setOnClickListener {
-            exportLauncher.launch("emotepack_backup.zip")
-        }
-
-        binding.btnImportBackup.setOnClickListener {
-            importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
         }
 
         observeState()
@@ -105,18 +82,6 @@ class MyPacksFragment : Fragment() {
                         } else {
                             binding.cardResumeJob.visibility = View.GONE
                         }
-                    }
-                }
-
-                launch {
-                    viewModel.backupEvents.collect { ev ->
-                        val msg = when (ev) {
-                            is BackupEvent.ExportSuccess -> getString(R.string.backup_export_success, ev.count)
-                            is BackupEvent.ExportEmpty -> getString(R.string.backup_export_empty)
-                            is BackupEvent.ImportSuccess -> getString(R.string.backup_import_success, ev.count)
-                            is BackupEvent.Error -> getString(R.string.backup_error, ev.message)
-                        }
-                        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
                     }
                 }
             }

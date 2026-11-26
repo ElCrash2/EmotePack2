@@ -58,7 +58,7 @@ class EmotePackApplication : Application() {
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://7tv.io/")
+            .baseUrl("https://api.7tv.app/")
             .client(okHttpClient)
             .build()
 

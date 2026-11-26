@@ -149,14 +149,6 @@
     <string name="confirm_delete">Hapus</string>
     <string name="cancel">Batal</string>
 
-    <!-- Backup Export / Import -->
-    <string name="backup_export">Ekspor cadangan</string>
-    <string name="backup_import">Impor cadangan</string>
-    <string name="backup_export_success">Cadangan diekspor (%1$d koleksi).</string>
-    <string name="backup_export_empty">Tidak ada koleksi untuk dicadangkan.</string>
-    <string name="backup_import_success">%1$d koleksi diimpor secara offline.</string>
-    <string name="backup_error">Operasi cadangan gagal: %1$s</string>
-
     <!-- Settings -->
     <string name="settings_title">Pengaturan</string>
     <string name="settings_language_section">Bahasa</string>
@@ -177,7 +169,6 @@
     <string name="settings_storage_free">Ruang bebas perangkat: %1$s</string>
     <string name="settings_clear_cache">Bersihkan cache tak terpakai</string>
     <string name="settings_cache_cleared">Cache tak terpakai dibersihkan (paket tersimpan tetap aman).</string>
-    <string name="settings_backup_section">Cadangan Transfer Perangkat</string>
     <string name="settings_about_section">Tentang &amp; Legal</string>
     <string name="settings_7tv_info">Informasi Sumber 7TV</string>
     <string name="settings_7tv_desc">Menggunakan API publik resmi 7TV v3 untuk mencari kreator, set emote, dan varian resolusi tinggi tanpa scraping.</string>

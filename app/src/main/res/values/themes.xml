@@ -21,9 +21,32 @@
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
         <item name="colorOutline">@color/stroke_subtle</item>
 
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
+
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="TextAppearance.EmotePack.DisplayTitle" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/space_grotesk</item>
+        <item name="fontFamily">@font/space_grotesk</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <style name="TextAppearance.EmotePack.SectionTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">@font/space_grotesk</item>
+        <item name="fontFamily">@font/space_grotesk</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.EmotePack.Tab" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/space_grotesk</item>
+        <item name="fontFamily">@font/space_grotesk</item>
+        <item name="android:textStyle">bold</item>
+        <item name="textAllCaps">false</item>
     </style>
 
     <style name="Widget.EmotePack.Card" parent="Widget.Material3.CardView.Filled">
@@ -41,7 +64,20 @@
         <item name="boxCornerRadiusBottomStart">14dp</item>
         <item name="boxCornerRadiusBottomEnd">14dp</item>
         <item name="boxStrokeColor">@color/stroke_subtle</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">1.5dp</item>
         <item name="hintTextColor">@color/accent_cyan</item>
+    </style>
+
+    <style name="Widget.EmotePack.TopTabs" parent="Widget.Material3.TabLayout">
+        <item name="tabBackground">@color/surface_base</item>
+        <item name="tabIndicatorColor">@color/accent_cyan</item>
+        <item name="tabIndicatorHeight">3dp</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabSelectedTextColor">@color/accent_cyan</item>
+        <item name="tabTextColor">@color/text_secondary</item>
+        <item name="tabRippleColor">@color/accent_cyan_container</item>
+        <item name="tabTextAppearance">@style/TextAppearance.EmotePack.Tab</item>
     </style>
 
     <style name="ShapeAppearance.EmotePack.Circle" parent="">

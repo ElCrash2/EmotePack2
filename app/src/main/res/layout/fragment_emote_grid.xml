@@ -81,7 +81,9 @@
                 android:background="@color/surface_elevated"
                 android:contentDescription="@string/search_streamer_label"
                 android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.EmotePack.Circle" />
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.EmotePack.Circle"
+                app:strokeColor="@color/stroke_subtle"
+                app:strokeWidth="1dp" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -94,9 +96,8 @@
                     android:id="@+id/tv_header_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/text_primary"
-                    android:textStyle="bold" />
+                    android:textAppearance="@style/TextAppearance.EmotePack.SectionTitle"
+                    android:textColor="@color/text_primary" />
 
                 <TextView
                     android:id="@+id/tv_header_subtitle"
@@ -137,8 +138,11 @@
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
+            android:fontFamily="@font/space_grotesk"
             android:text="@string/select_first_30"
             android:textColor="@color/text_primary"
+            android:textStyle="bold"
+            app:backgroundTint="@color/surface_base"
             app:cornerRadius="12dp"
             app:icon="@drawable/ic_select_all"
             app:iconTint="@color/accent_cyan"
@@ -154,6 +158,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_badge_static"
+            android:fontFamily="@font/space_grotesk"
             android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"

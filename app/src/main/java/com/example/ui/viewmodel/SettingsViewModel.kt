@@ -1,17 +1,14 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.EmotePackApplication
 import com.example.data.local.AppLanguage
 import com.example.data.local.StorageStats
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -29,9 +26,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val _storageStats = MutableStateFlow(StorageStats(0L, 0L, 0L))
     val storageStats: StateFlow<StorageStats> = _storageStats.asStateFlow()
-
-    private val _backupEvents = MutableSharedFlow<BackupEvent>()
-    val backupEvents = _backupEvents.asSharedFlow()
 
     fun refreshStorageStats() {
         viewModelScope.launch {
@@ -51,33 +45,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             collectionRepo.clearProtectedCache()
             refreshStorageStats()
             onDone()
-        }
-    }
-
-    fun exportBackup(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                if (collectionRepo.getCollectionsCount() == 0) {
-                    _backupEvents.emit(BackupEvent.ExportEmpty)
-                    return@launch
-                }
-                val count = collectionRepo.exportBackupToUri(uri)
-                _backupEvents.emit(BackupEvent.ExportSuccess(count))
-            } catch (e: Exception) {
-                _backupEvents.emit(BackupEvent.Error(e.message ?: "Export failed"))
-            }
-        }
-    }
-
-    fun importBackup(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                val count = collectionRepo.importBackupFromUri(uri)
-                refreshStorageStats()
-                _backupEvents.emit(BackupEvent.ImportSuccess(count))
-            } catch (e: Exception) {
-                _backupEvents.emit(BackupEvent.Error(e.message ?: "Import failed"))
-            }
         }
     }
 }

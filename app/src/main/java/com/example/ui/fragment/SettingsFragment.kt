@@ -5,19 +5,17 @@ import android.text.format.Formatter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.AppNavigator
+import com.example.BuildConfig
 import com.example.R
 import com.example.data.local.AppLanguage
 import com.example.databinding.FragmentSettingsBinding
-import com.example.ui.viewmodel.BackupEvent
 import com.example.ui.viewmodel.SettingsViewModel
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -28,18 +26,6 @@ class SettingsFragment : Fragment() {
     private val viewModel: SettingsViewModel by viewModels()
 
     private var suppressRadio = false
-
-    private val exportLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri ->
-        if (uri != null) viewModel.exportBackup(uri)
-    }
-
-    private val importLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) viewModel.importBackup(uri)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,9 +41,11 @@ class SettingsFragment : Fragment() {
 
         (activity as? AppNavigator)?.configureToolbar(
             title = getString(R.string.settings_title),
-            showBack = false,
+            showBack = true,
             showCreatePackAction = false
         )
+
+        binding.tvAppVersion.text = getString(R.string.info_version, BuildConfig.VERSION_NAME)
 
         binding.rgLanguage.setOnCheckedChangeListener { _, checkedId ->
             if (suppressRadio) return@setOnCheckedChangeListener
@@ -79,26 +67,6 @@ class SettingsFragment : Fragment() {
             viewModel.clearCache {
                 Snackbar.make(binding.root, R.string.settings_cache_cleared, Snackbar.LENGTH_SHORT).show()
             }
-        }
-
-        binding.btnSettingsExport.setOnClickListener {
-            exportLauncher.launch("emotepack_backup.zip")
-        }
-
-        binding.btnSettingsImport.setOnClickListener {
-            importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
-        }
-
-        binding.btnOpenAppInfo.setOnClickListener {
-            (activity as? AppNavigator)?.openAppInfo()
-        }
-
-        binding.btnOpenPrivacy.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.privacy_policy_title)
-                .setMessage(R.string.privacy_policy_body)
-                .setPositiveButton(R.string.ok, null)
-                .show()
         }
 
         viewModel.refreshStorageStats()
@@ -155,18 +123,6 @@ class SettingsFragment : Fragment() {
                             R.string.settings_storage_free,
                             Formatter.formatFileSize(ctx, stats.freeDeviceBytes)
                         )
-                    }
-                }
-
-                launch {
-                    viewModel.backupEvents.collect { ev ->
-                        val msg = when (ev) {
-                            is BackupEvent.ExportSuccess -> getString(R.string.backup_export_success, ev.count)
-                            is BackupEvent.ExportEmpty -> getString(R.string.backup_export_empty)
-                            is BackupEvent.ImportSuccess -> getString(R.string.backup_import_success, ev.count)
-                            is BackupEvent.Error -> getString(R.string.backup_error, ev.message)
-                        }
-                        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
                     }
                 }
             }

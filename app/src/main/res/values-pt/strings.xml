@@ -149,14 +149,6 @@
     <string name="confirm_delete">Excluir</string>
     <string name="cancel">Cancelar</string>
 
-    <!-- Backup Export / Import -->
-    <string name="backup_export">Exportar backup</string>
-    <string name="backup_import">Importar backup</string>
-    <string name="backup_export_success">Backup exportado (%1$d coleções).</string>
-    <string name="backup_export_empty">Nenhuma coleção disponível para backup.</string>
-    <string name="backup_import_success">%1$d coleção(ões) importada(s) offline.</string>
-    <string name="backup_error">Falha na operação de backup: %1$s</string>
-
     <!-- Settings -->
     <string name="settings_title">Configurações</string>
     <string name="settings_language_section">Idioma</string>
@@ -177,7 +169,6 @@
     <string name="settings_storage_free">Espaço livre no dispositivo: %1$s</string>
     <string name="settings_clear_cache">Limpar cache não utilizado</string>
     <string name="settings_cache_cleared">Cache não utilizado limpo (pacotes salvos preservados).</string>
-    <string name="settings_backup_section">Backup para transferência</string>
     <string name="settings_about_section">Sobre e avisos legais</string>
     <string name="settings_7tv_info">Informações da fonte 7TV</string>
     <string name="settings_7tv_desc">Usa a API pública oficial 7TV v3 para pesquisar criadores, conjuntos de emotes e variantes em alta resolução sem scraping.</string>

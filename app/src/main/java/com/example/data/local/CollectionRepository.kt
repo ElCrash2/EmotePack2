@@ -1,7 +1,6 @@
 package com.example.data.local
 
 import android.content.Context
-import android.net.Uri
 import com.example.AppConfig
 import com.example.conversion.StickerConverter
 import com.example.data.model.SearchOrigin
@@ -71,9 +70,6 @@ class CollectionRepository(
     suspend fun markSubpackAddedToWhatsApp(subpackId: String, added: Boolean) {
         subpackDao.markAddedToWhatsApp(subpackId, added)
     }
-
-    suspend fun getCollectionsCount(): Int =
-        collectionDao.getAllCollectionsWithDetails().size
 
     /**
      * Prepares a new or edited single-pack collection (max 30 stickers) in Room before starting
@@ -459,22 +455,5 @@ class CollectionRepository(
         if (deadKeys.isNotEmpty()) {
             emoteCacheDao.deleteByKeys(deadKeys)
         }
-    }
-
-    suspend fun exportBackupToUri(uri: Uri): Int = withContext(Dispatchers.IO) {
-        val all = collectionDao.getAllCollectionsWithDetails()
-        storage.exportBackup(uri, all)
-    }
-
-    suspend fun importBackupFromUri(uri: Uri): Int = withContext(Dispatchers.IO) {
-        val imported = storage.importBackup(uri)
-        for (entry in imported) {
-            collectionDao.upsert(entry.collection)
-            itemDao.deleteForCollection(entry.collection.id)
-            itemDao.insertAll(entry.items)
-            subpackDao.deleteForCollection(entry.collection.id)
-            subpackDao.insertAll(entry.subpacks)
-        }
-        imported.size
     }
 }

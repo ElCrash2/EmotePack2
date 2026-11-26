@@ -815,4 +815,109 @@ class EmotePackRobolectricTest {
         assertTrue(success.webpBytes.size <= StickerConverter.MAX_ANIMATED_BYTES)
         assertTrue(success.inspection.frameCount >= 2)
     }
+
+    @Test
+    fun `main activity uses top tabs for home and my packs and opens merged settings and info`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+
+        val topTabs = activity.findViewById<com.google.android.material.tabs.TabLayout>(R.id.top_tab_layout)
+        val settingsBtn = activity.findViewById<android.widget.ImageButton>(R.id.btn_toolbar_settings)
+        assertEquals(android.view.View.VISIBLE, topTabs.visibility)
+        assertEquals(android.view.View.VISIBLE, settingsBtn.visibility)
+        assertEquals(2, topTabs.tabCount)
+        assertTrue(activity.supportFragmentManager.findFragmentById(R.id.fragment_container) is com.example.ui.fragment.HomeFragment)
+
+        // Switch to My Packs tab
+        topTabs.getTabAt(1)!!.select()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertTrue(activity.supportFragmentManager.findFragmentById(R.id.fragment_container) is com.example.ui.fragment.MyPacksFragment)
+        assertEquals(android.view.View.VISIBLE, topTabs.visibility)
+        assertEquals(android.view.View.VISIBLE, settingsBtn.visibility)
+
+        // Open merged Settings + App Information screen from top-right gear icon
+        settingsBtn.performClick()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        val currentFragment = activity.supportFragmentManager.findFragmentById(R.id.fragment_container)
+        assertTrue(currentFragment is com.example.ui.fragment.SettingsFragment)
+        assertEquals(android.view.View.GONE, topTabs.visibility)
+        assertEquals(android.view.View.GONE, settingsBtn.visibility)
+        assertNotNull(activity.findViewById<android.widget.TextView>(R.id.tv_app_version))
+        assertTrue(activity.findViewById<android.widget.TextView>(R.id.tv_app_version).text.contains(BuildConfig.VERSION_NAME))
+
+        // Back returns to My Packs root tab with tabs & gear restored
+        activity.onBackPressedDispatcher.onBackPressed()
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertTrue(activity.supportFragmentManager.findFragmentById(R.id.fragment_container) is com.example.ui.fragment.MyPacksFragment)
+        assertEquals(android.view.View.VISIBLE, topTabs.visibility)
+        assertEquals(android.view.View.VISIBLE, settingsBtn.visibility)
+    }
+
+    @Test
+    fun `sevenTv searchEmotes recovers from HTTP 200 GraphQL errors via minimal and v4 fallbacks`() = runBlocking {
+        val fakeApi = object : com.example.data.remote.SevenTvApiService {
+            override suspend fun queryGraphQlV3(body: okhttp3.RequestBody): retrofit2.Response<okhttp3.ResponseBody> {
+                val buf = okio.Buffer()
+                body.writeTo(buf)
+                val payload = buf.readUtf8()
+                val json = if (payload.contains("SearchEmotesMinimal")) {
+                    """
+                    {
+                      "data": {
+                        "emotes": {
+                          "count": 1,
+                          "items": [
+                            {
+                              "id": "01ABC123",
+                              "name": "peepoHappy",
+                              "flags": 0,
+                              "animated": false,
+                              "host": {
+                                "url": "//cdn.7tv.app/emote/01ABC123",
+                                "files": [
+                                  { "name": "2x.webp", "width": 64, "height": 64, "format": "WEBP" },
+                                  { "name": "4x.webp", "width": 128, "height": 128, "format": "WEBP" }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                    """.trimIndent()
+                } else {
+                    """{"errors":[{"message":"Cannot query field \"owner\" on type \"EmotePartial\""}],"data":{"emotes":null}}"""
+                }
+                return retrofit2.Response.success(
+                    okhttp3.ResponseBody.create(null, json)
+                )
+            }
+
+            override suspend fun queryGraphQlV4(body: okhttp3.RequestBody): retrofit2.Response<okhttp3.ResponseBody> =
+                retrofit2.Response.error(404, okhttp3.ResponseBody.create(null, ""))
+
+            override suspend fun postGraphQl(url: String, body: okhttp3.RequestBody): retrofit2.Response<okhttp3.ResponseBody> =
+                retrofit2.Response.error(404, okhttp3.ResponseBody.create(null, ""))
+
+            override suspend fun getUserById(userId: String) =
+                retrofit2.Response.error<okhttp3.ResponseBody>(404, okhttp3.ResponseBody.create(null, ""))
+
+            override suspend fun getEmoteSetById(setId: String) =
+                retrofit2.Response.error<okhttp3.ResponseBody>(404, okhttp3.ResponseBody.create(null, ""))
+
+            override suspend fun getEmoteById(emoteId: String) =
+                retrofit2.Response.error<okhttp3.ResponseBody>(404, okhttp3.ResponseBody.create(null, ""))
+
+            override suspend fun downloadFile(url: String) =
+                retrofit2.Response.error<okhttp3.ResponseBody>(404, okhttp3.ResponseBody.create(null, ""))
+        }
+
+        val repo = com.example.data.remote.SevenTvRepository(fakeApi)
+        val res = repo.searchEmotes("peepo", page = 1, limit = 30)
+        assertTrue("Expected Success after HTTP 200 GQL fallback, got $res", res is com.example.data.remote.ApiResult.Success)
+        val data = (res as com.example.data.remote.ApiResult.Success).data
+        assertEquals(1, data.items.size)
+        assertEquals("peepoHappy", data.items.first().name)
+        assertEquals("https://cdn.7tv.app/emote/01ABC123/4x.webp", data.items.first().highResUrl)
+    }
 }

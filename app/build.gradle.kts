@@ -91,7 +91,7 @@ dependencies {
   implementation(libs.google.material)
   implementation(libs.androidx.constraintlayout)
   implementation(libs.androidx.recyclerview)
-  implementation(libs.androidx.drawerlayout)
+  // implementation(libs.androidx.drawerlayout)
   implementation(libs.androidx.fragment.ktx)
   implementation(libs.androidx.activity.ktx)
   implementation(libs.androidx.swiperefreshlayout)

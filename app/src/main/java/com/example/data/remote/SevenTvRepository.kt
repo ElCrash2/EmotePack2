@@ -27,6 +27,11 @@ sealed class ApiResult<out T> {
 
 class SevenTvRepository(private val api: SevenTvApiService) {
 
+    companion object {
+        private const val LEGACY_V3_GQL_URL = "https://7tv.io/v3/gql"
+        private const val LEGACY_V4_GQL_URL = "https://7tv.io/v4/gql"
+    }
+
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     private val userSearchCache = LruCache<String, UserSearchPage>(30)
@@ -95,7 +100,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
             var bodyStr = response?.body()?.string()
 
             // Fallback if v3 GQL users() does not accept page/limit arguments
-            if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr)) {
+            if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr, "users")) {
                 val gqlV3Simple = JSONObject().apply {
                     put(
                         "query",
@@ -120,9 +125,18 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                 }
                 response = retryCall { api.queryGraphQlV3(gqlV3Simple.toString().toRequestBody(jsonMediaType)) }
                 bodyStr = response?.body()?.string()
+
+                if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr, "users")) {
+                    val legacyRes = retryCall { api.postGraphQl(LEGACY_V3_GQL_URL, gqlV3Simple.toString().toRequestBody(jsonMediaType)) }
+                    val legacyBody = legacyRes?.body()?.string()
+                    if (legacyRes != null && legacyRes.isSuccessful && !hasGraphQlErrors(legacyBody, "users")) {
+                        response = legacyRes
+                        bodyStr = legacyBody
+                    }
+                }
             }
 
-            if (response != null && response.isSuccessful && !bodyStr.isNullOrBlank() && !hasGraphQlErrors(bodyStr)) {
+            if (response != null && response.isSuccessful && !bodyStr.isNullOrBlank() && !hasGraphQlErrors(bodyStr, "users")) {
                 val parsed = parseUsersFromGql(JSONObject(bodyStr), page, limit)
                 userSearchCache.put(cacheKey, parsed)
                 return@withContext ApiResult.Success(parsed)
@@ -135,8 +149,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                 return@withContext ApiResult.Success(v4Result)
             }
 
-            val code = response?.code()?.toString() ?: "GQL"
-            ApiResult.Error("HTTP $code")
+            ApiResult.Error(extractGraphQlError(response, bodyStr))
         } catch (e: IOException) {
             ApiResult.Error(e.message ?: "Network error", isNetwork = true)
         } catch (e: Exception) {
@@ -225,7 +238,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
         emoteSearchCache.get(cacheKey)?.let { return@withContext ApiResult.Success(it) }
 
         try {
-            val gqlV3 = JSONObject().apply {
+            val gqlV3Standard = JSONObject().apply {
                 put(
                     "query",
                     """
@@ -237,7 +250,6 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                           name
                           flags
                           animated
-                          updated_at
                           owner {
                             id
                             username
@@ -266,24 +278,104 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                 })
             }
 
-            val response = retryCall { api.queryGraphQlV3(gqlV3.toString().toRequestBody(jsonMediaType)) }
-            val bodyStr = response?.body()?.string()
+            val gqlV3Minimal = JSONObject().apply {
+                put(
+                    "query",
+                    """
+                    query SearchEmotesMinimal(${'$'}query: String!, ${'$'}page: Int, ${'$'}limit: Int) {
+                      emotes(query: ${'$'}query, page: ${'$'}page, limit: ${'$'}limit) {
+                        count
+                        items {
+                          id
+                          name
+                          flags
+                          animated
+                          host {
+                            url
+                            files {
+                              name
+                              width
+                              height
+                              format
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """.trimIndent()
+                )
+                put("variables", JSONObject().apply {
+                    put("query", trimmed)
+                    put("page", page)
+                    put("limit", limit)
+                })
+            }
 
-            if (response != null && response.isSuccessful && !bodyStr.isNullOrBlank() && !hasGraphQlErrors(bodyStr)) {
+            val gqlV3NoPaging = JSONObject().apply {
+                put(
+                    "query",
+                    """
+                    query SearchEmotesSimple(${'$'}query: String!) {
+                      emotes(query: ${'$'}query) {
+                        count
+                        items {
+                          id
+                          name
+                          flags
+                          animated
+                          host {
+                            url
+                            files {
+                              name
+                              width
+                              height
+                              format
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """.trimIndent()
+                )
+                put("variables", JSONObject().apply { put("query", trimmed) })
+            }
+
+            var response = retryCall { api.queryGraphQlV3(gqlV3Standard.toString().toRequestBody(jsonMediaType)) }
+            var bodyStr = response?.body()?.string()
+
+            if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr, "emotes")) {
+                response = retryCall { api.queryGraphQlV3(gqlV3Minimal.toString().toRequestBody(jsonMediaType)) }
+                bodyStr = response?.body()?.string()
+            }
+
+            if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr, "emotes")) {
+                response = retryCall { api.queryGraphQlV3(gqlV3NoPaging.toString().toRequestBody(jsonMediaType)) }
+                bodyStr = response?.body()?.string()
+            }
+
+            if (response == null || !response.isSuccessful || hasGraphQlErrors(bodyStr, "emotes")) {
+                val legacyRes = retryCall { api.postGraphQl(LEGACY_V3_GQL_URL, gqlV3Minimal.toString().toRequestBody(jsonMediaType)) }
+                val legacyBody = legacyRes?.body()?.string()
+                if (legacyRes != null && legacyRes.isSuccessful && !hasGraphQlErrors(legacyBody, "emotes")) {
+                    response = legacyRes
+                    bodyStr = legacyBody
+                }
+            }
+
+            if (response != null && response.isSuccessful && !bodyStr.isNullOrBlank() && !hasGraphQlErrors(bodyStr, "emotes")) {
                 val parsed = parseEmotesFromGql(JSONObject(bodyStr), page, limit)
                 emoteSearchCache.put(cacheKey, parsed)
                 return@withContext ApiResult.Success(parsed)
             }
 
-            // Secondary fallback to v4 GQL if v3 ever rejects
+            // Secondary fallback to v4 GQL if v3 rejects or is unavailable
             val v4Page = trySearchEmotesV4(trimmed, page, limit)
             if (v4Page != null) {
                 emoteSearchCache.put(cacheKey, v4Page)
                 return@withContext ApiResult.Success(v4Page)
             }
 
-            val code = response?.code()?.toString() ?: "GQL"
-            ApiResult.Error("HTTP $code")
+            ApiResult.Error(extractGraphQlError(response, bodyStr))
         } catch (e: IOException) {
             ApiResult.Error(e.message ?: "Network error", isNetwork = true)
         } catch (e: Exception) {
@@ -335,7 +427,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
             }
             val res = retryCall { api.queryGraphQlV4(gql.toString().toRequestBody(jsonMediaType)) } ?: return null
             val raw = res.body()?.string() ?: return null
-            if (!res.isSuccessful || hasGraphQlErrors(raw)) return null
+            if (!res.isSuccessful || hasGraphQlErrors(raw, "users")) return null
             val data = JSONObject(raw).optJSONObject("data") ?: return null
             val usersObj = data.optJSONObject("users") ?: return null
             val searchObj = usersObj.optJSONObject("search") ?: return null
@@ -370,7 +462,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
 
     private suspend fun trySearchEmotesV4(query: String, page: Int, limit: Int): EmoteSearchPage? {
         return try {
-            val gql = JSONObject().apply {
+            val gqlEmotesSearch = JSONObject().apply {
                 put(
                     "query",
                     """
@@ -405,21 +497,86 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                     put("perPage", limit)
                 })
             }
-            val res = retryCall { api.queryGraphQlV4(gql.toString().toRequestBody(jsonMediaType)) } ?: return null
-            val raw = res.body()?.string() ?: return null
-            if (!res.isSuccessful || hasGraphQlErrors(raw)) return null
-            val data = JSONObject(raw).optJSONObject("data") ?: return null
-            val emotesObj = data.optJSONObject("emotes") ?: return null
-            val searchObj = emotesObj.optJSONObject("search") ?: return null
+
+            val gqlSearchAll = JSONObject().apply {
+                put(
+                    "query",
+                    """
+                    query SearchAllEmotesV4(${'$'}query: String!, ${'$'}page: Int, ${'$'}perPage: Int) {
+                      search {
+                        all(query: ${'$'}query, page: ${'$'}page, perPage: ${'$'}perPage) {
+                          emotes {
+                            items {
+                              id
+                              defaultName
+                              flags {
+                                animated
+                              }
+                              images {
+                                url
+                                mime
+                                size
+                                scale
+                                width
+                                height
+                                frameCount
+                              }
+                            }
+                            totalCount
+                          }
+                        }
+                      }
+                    }
+                    """.trimIndent()
+                )
+                put("variables", JSONObject().apply {
+                    put("query", query)
+                    put("page", page)
+                    put("perPage", limit)
+                })
+            }
+
+            parseV4EmotesResponse(
+                retryCall { api.queryGraphQlV4(gqlEmotesSearch.toString().toRequestBody(jsonMediaType)) },
+                page,
+                limit
+            ) ?: parseV4EmotesResponse(
+                retryCall { api.queryGraphQlV4(gqlSearchAll.toString().toRequestBody(jsonMediaType)) },
+                page,
+                limit
+            ) ?: parseV4EmotesResponse(
+                retryCall { api.postGraphQl(LEGACY_V4_GQL_URL, gqlEmotesSearch.toString().toRequestBody(jsonMediaType)) },
+                page,
+                limit
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun parseV4EmotesResponse(
+        res: retrofit2.Response<okhttp3.ResponseBody>?,
+        page: Int,
+        limit: Int
+    ): EmoteSearchPage? {
+        val raw = res?.body()?.string() ?: return null
+        if (!res.isSuccessful) return null
+        return try {
+            val root = JSONObject(raw)
+            val data = root.optJSONObject("data") ?: return null
+            val searchObj = data.optJSONObject("emotes")?.optJSONObject("search")
+                ?: data.optJSONObject("search")?.optJSONObject("all")?.optJSONObject("emotes")
+                ?: return null
             val items = searchObj.optJSONArray("items") ?: JSONArray()
             val totalCount = searchObj.optInt("totalCount", items.length())
             val list = buildList {
                 for (i in 0 until items.length()) {
                     val obj = items.optJSONObject(i) ?: continue
                     val id = obj.optString("id")
-                    val name = obj.optString("defaultName")
+                    if (id.isBlank()) continue
+                    val name = obj.optString("defaultName").ifBlank { obj.optString("name").ifBlank { id } }
                     val flagsObj = obj.optJSONObject("flags")
-                    val animated = flagsObj?.optBoolean("animated", false) ?: false
+                    val animated = flagsObj?.optBoolean("animated", false) ?: obj.optBoolean("animated", false)
                     val images = obj.optJSONArray("images") ?: JSONArray()
                     val variants = buildList {
                         for (j in 0 until images.length()) {
@@ -471,6 +628,7 @@ class SevenTvRepository(private val api: SevenTvApiService) {
         var hasMore = false
 
         when (usersNode) {
+            null -> return UserSearchPage(emptyList(), page, false)
             is JSONArray -> {
                 usersArray = usersNode
                 // If v3 returned full list without server pagination, slice client-side or check size
@@ -591,6 +749,13 @@ class SevenTvRepository(private val api: SevenTvApiService) {
                 val obj = itemsArr.optJSONObject(i) ?: continue
                 parseEmoteObject(obj)?.let { add(it) }
             }
+        }
+        if (items.size > limit) {
+            val from = (page - 1) * limit
+            val to = minOf(from + limit, items.size)
+            val sliced = if (from < items.size) items.subList(from, to) else emptyList()
+            val effectiveTotal = maxOf(total, items.size)
+            return EmoteSearchPage(sliced, effectiveTotal, page, to < items.size)
         }
         val hasMore = if (total > 0) (page * limit) < total else items.size >= limit
         return EmoteSearchPage(items, total, page, hasMore)
@@ -722,15 +887,40 @@ class SevenTvRepository(private val api: SevenTvApiService) {
         }
     }
 
-    private fun hasGraphQlErrors(body: String?): Boolean {
+    private fun hasGraphQlErrors(body: String?, expectedDataField: String? = null): Boolean {
         if (body.isNullOrBlank()) return true
         return try {
             val obj = JSONObject(body)
+            val data = obj.optJSONObject("data") ?: return true
+            if (expectedDataField != null && data.isNull(expectedDataField)) {
+                return true
+            }
             val errors = obj.optJSONArray("errors")
             errors != null && errors.length() > 0 && obj.isNull("data")
         } catch (_: Exception) {
             true
         }
+    }
+
+    private fun extractGraphQlError(
+        response: retrofit2.Response<okhttp3.ResponseBody>?,
+        bodyStr: String?
+    ): String {
+        if (response == null) return "GQL"
+        if (!response.isSuccessful) return "HTTP ${response.code()}"
+        if (!bodyStr.isNullOrBlank()) {
+            try {
+                val obj = JSONObject(bodyStr)
+                val errors = obj.optJSONArray("errors")
+                if (errors != null && errors.length() > 0) {
+                    val msg = errors.optJSONObject(0)?.optString("message").orEmpty()
+                    if (msg.isNotBlank()) return msg
+                }
+            } catch (_: Exception) {
+                return "Invalid response (HTTP ${response.code()})"
+            }
+        }
+        return "HTTP ${response.code()}"
     }
 
     private suspend fun <T> retryCall(

@@ -5,43 +5,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Backup export/import bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="8dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_export_backup"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="@string/backup_export"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
-            app:icon="@drawable/ic_backup"
-            app:iconTint="@color/accent_cyan"
-            app:strokeColor="@color/stroke_subtle" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_import_backup"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:text="@string/backup_import"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
-            app:icon="@drawable/ic_restore"
-            app:iconTint="@color/accent_violet"
-            app:strokeColor="@color/stroke_subtle" />
-    </LinearLayout>
-
     <!-- Active/paused background job banner -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_resume_job"
@@ -49,7 +12,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="4dp"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
@@ -60,6 +24,7 @@
             android:id="@+id/tv_resume_job"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/space_grotesk"
             android:padding="14dp"
             android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
             android:textColor="@color/text_primary"
@@ -77,7 +42,7 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="24dp" />
+            android:paddingBottom="28dp" />
 
         <LinearLayout
             android:id="@+id/empty_packs_container"
@@ -90,9 +55,11 @@
             android:visibility="gone">
 
             <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:background="@drawable/bg_emote_stage"
                 android:contentDescription="@string/nav_my_packs"
+                android:padding="14dp"
                 android:src="@drawable/ic_launcher_art" />
 
             <TextView
@@ -100,9 +67,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/my_packs_empty_title"
-                android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                android:textAppearance="@style/TextAppearance.EmotePack.DisplayTitle"
                 android:textColor="@color/text_primary"
-                android:textStyle="bold" />
+                android:textSize="20sp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -117,9 +84,12 @@
                 android:id="@+id/btn_go_home"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="18dp"
+                android:fontFamily="@font/space_grotesk"
+                android:paddingHorizontal="20dp"
                 android:text="@string/my_packs_go_home"
                 android:textColor="@color/on_accent_dark"
+                android:textStyle="bold"
                 app:backgroundTint="@color/accent_cyan"
                 app:cornerRadius="12dp" />
         </LinearLayout>

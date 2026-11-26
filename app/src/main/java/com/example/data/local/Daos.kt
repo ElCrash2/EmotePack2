@@ -23,10 +23,6 @@ interface CollectionDao {
     @Query("SELECT * FROM sticker_collections WHERE id = :collectionId")
     suspend fun getCollectionWithDetails(collectionId: String): CollectionWithDetails?
 
-    @Transaction
-    @Query("SELECT * FROM sticker_collections ORDER BY createdAt ASC")
-    suspend fun getAllCollectionsWithDetails(): List<CollectionWithDetails>
-
     @Upsert
     suspend fun upsert(collection: StickerCollectionEntity)
 
